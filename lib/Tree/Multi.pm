@@ -443,7 +443,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
-if ($^O =~ m(bsd|linux)i) {plan tests => 7}                                     # Supported systems
+if ($^O =~ m(bsd|linux)i) {plan tests => 1}                                     # Supported systems
 else
  {plan skip_all =>qq(Not supported on: $^O);
  }
