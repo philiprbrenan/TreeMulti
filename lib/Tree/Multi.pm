@@ -249,33 +249,34 @@ sub findAndSplit($$)                                                            
   confess 'Not possible';
  } # findAndSplit
 
-sub find($$)                                                                    # Find a key in a tree returning (last comparison, the last node searched, the index of the last key compared)
+sub find($$)                                                                    # Find a key in a tree returning its associated data or undef if the key does not exist
  {my ($tree, $key) = @_;                                                        # Tree, key
   @_ == 2 or confess;
   my @k = $tree->keys->@*;
 
-  if ($key < $k[0])                                                             # Less than smallest key in node
+  if ($key lt $k[0])                                                            # Less than smallest key in node
    {if (my $node = $tree->node->[0])
      {return __SUB__->($node, $key);
      }
-    return (-1, $tree, 0);
+    return undef;
    }
 
-  if ($key > $k[-1])                                                            # Greater than largest key in node
+  if ($key gt $k[-1])                                                           # Greater than largest key in node
    {if (my $node = $tree->node->[-1])
      {return __SUB__->($node, $key);
      }
-    return (+1, $tree, $#k);
+    return undef;
    }
 
   for my $i(keys @k)                                                            # Search the keys in this node
    {my $s = $k[$i] cmp $key;                                                    # Compare key
-    return (0, $tree, $i) if $s == 0;                                           # Found key
+say STDERR "BBBB i=$i   $k[$i] cmp $key == $s";
+    return $tree->data->[$i] if $s == 0;                                        # Found key
     if ($s < 0)                                                                 # Less than current key
      {if (my $node = $tree->node->[$i])
        {return __SUB__->($node, $key);
        }
-      return (-1, $tree, $i);
+      return undef;
      }
    }
   confess 'Not possible';
@@ -318,7 +319,7 @@ sub printKeysAndData($)                                                         
   my $print = sub
    {my ($t, $in) = @_;
     return unless $t and $t->keys;
-    push @s, join ' ', ('  'x$in), $t->keys->@*;                                # Print keys
+    push @s, join ' ', ('  'x$in), $t->keys->@*, ' ', $t->data->@*;             # Print keys
 
     if (my $nodes = $t->node)                                                   # Each key
      {for my $n($nodes->@*)                                                     # Each key
@@ -457,9 +458,9 @@ eval {goto latest} if !caller(0) and -e "/home/phil";                           
 if (1) {                                                                        #Tinsert
   local $keysPerNode = 15;
 
-  my $t = new;
+  my $t = new; my $N = 256;
 
-  $t = insert($t, $_, 2*$_) for 1..256;
+  $t = insert($t, $_, 2*$_) for 1..$N;
 
   is_deeply $t->printKeys, <<END;
  72 144
@@ -495,6 +496,16 @@ if (1) {                                                                        
      235 236 237 238 239 240 241 242
      244 245 246 247 248 249 250 251 252 253 254 255 256
 END
+
+  if (1)                                                                        #
+   {my $n = 0;
+    for my $i(1..$N)                                                            #
+     {my $ii = $t->find($i);
+      say STDERR "AAAA ", dump($ii);
+       ++$n if $t->find($i) eq 2 * $i;
+     }
+    ok $n == $N;
+   }
  }
 
 lll "Success:", time - $start;
