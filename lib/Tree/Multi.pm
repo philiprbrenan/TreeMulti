@@ -13,7 +13,7 @@ use Data::Dump qw(dump);
 use Data::Table::Text qw(:all);
 use feature qw(say current_sub);
 
-my $keysPerNode = 4;                                                            # Keys per node
+our $keysPerNode = 3;                                                           # Keys per node
 
 #D1 Multi-way Tree                                                              # Create and use a multi-way tree.
 
@@ -27,6 +27,16 @@ sub new()                                                                       
    );
  }
 
+sub check($)                                                                    # Check the integrity of a node
+ {my ($tree) = @_;                                                              # Tree
+  confess unless $tree;
+  confess unless $tree->keys->@* == $tree->data->@*;
+  confess if $tree->up and !$tree->up->node and !$tree->up->node->@*;
+  __SUB__->($tree->up) if $tree->up;
+  return unless my @n = $tree->node->@*;
+  confess unless $tree->keys->@*+1 == @n;
+ }
+
 sub root($)                                                                     # Return the root node of a tree
  {my ($tree) = @_;                                                              # Tree
   confess unless $tree;
@@ -34,23 +44,228 @@ sub root($)                                                                     
   $tree
  }
 
-sub find($$)                                                                    # Find a key in a tree returning (last comparison, the last node searched, the index of the last key compared)
+sub separateKeys($)                                                             #P Return ([lower], center, [upper]) keys
+ {my ($node) = @_;                                                              # Node to split
+  @_ == 1 or confess;
+  my @k = $node->keys->@*;
+  my @l; my @r;
+  while(@k > 1)
+   {push    @l, shift @k;
+    unshift @r, pop   @k if @k > 1;
+   }
+  @l > 0  or confess;
+  @r > 0  or confess;
+  @k == 1 or confess;
+  (\@l, $k[0], \@r);
+ }
+
+sub separateData($)                                                             #P Return ([lower], center, [upper]) data
+ {my ($node) = @_;                                                              # Node to split
+  @_ == 1 or confess;
+  my @d = $node->data->@*;
+  my @l; my @r;
+  while(@d > 1)
+   {push    @l, shift @d;
+    unshift @r, pop   @d if @d > 1;
+   }
+  @l > 0 or confess;
+  @r > 0 or confess;
+  @d == 1 or confess;
+  (\@l, $d[0], \@r);
+ }
+
+sub separateNode($)                                                             #P Return ([lower], [upper]) children
+ {my ($node) = @_;                                                              # Node to split
+  @_ == 1 or confess;
+  my @n = $node->node->@*;
+  @n == $keysPerNode + 1 or confess;
+
+  my @l; my @r;
+  while(@n > 1)
+   {push    @l, shift @n;
+    unshift @r, pop   @n;
+   }
+  @l > 0 && @r > 0 && @n == 0 or confess;
+  (\@l, \@r);
+ }
+
+sub reUp($@)                                                                    #P Reconnect the children to their new parent
+ {my ($node, @children) = @_;                                                   # Node, children
+  @_ > 1 or confess;
+
+  for my $c(@children)                                                          # Add new child to parent known to be not full
+   {$c->up = $node;
+   }
+ }
+
+sub splitNode($)                                                                #P Split a full node in half assuming it has a non full parent
+ {my ($node) = @_;                                                              # Node to split
+  @_ == 1 or confess;
+
+  confess unless my $p = $node->up;                                             # Check parent
+  confess unless $node->node->@* == $keysPerNode + 1;                           # Check size
+
+  my ($kl, $k, $kr) = separateKeys $node;
+  my ($dl, $d, $dr) = separateData $node;
+  my ($cl, $cr)     = separateNode $node;
+
+  my ($nl, $nr)     = (new, new);
+  $nl->up = $nr->up = $p;
+  $nl->keys = $kl; $nl->data = $dl; $nl->node = $cl; reUp($nl, @$cl);
+  $nr->keys = $kr; $nr->data = $dr; $nr->node = $cr; reUp($nr, @$cr);
+
+  my @n = $p->node->@*;
+  for my $i(keys @n)                                                            # Add new child to parent known to be not full
+   {if ($n[$i] == $node)
+     {splice $p->keys->@*, $i, 0, $k;
+      splice $p->data->@*, $i, 0, $d;
+      splice $p->node->@*, $i, 1, $nl, $nr;
+      return $p;                                                                # Return parent as we have delete the original node
+     }
+   }
+  confess;
+ }
+
+sub splitRootNode($)                                                            #P Split a full root
+ {my ($node) = @_;                                                              # Node to split
+  @_ == 1 or confess;
+
+  confess if $node->up;                                                         # Check parent
+  confess unless $node->node->@* == $keysPerNode + 1;                           # Check size
+
+  my ($kl, $k, $kr) = separateKeys $node;
+  my ($dl, $d, $dr) = separateData $node;
+  my ($cl, $cr)     = separateNode $node;
+
+  my $p = new;
+  my ($nl, $nr)     = (new, new);
+  $nl->up = $nr->up = $p;
+  $nl->keys = $kl; $nl->data = $dl; $nl->node = $cl; reUp($nl, @$cl);
+  $nr->keys = $kr; $nr->data = $dr; $nr->node = $cr; reUp($nr, @$cr);
+
+  $p->keys = [$k];
+  $p->data = [$d];
+  $p->node = [$nl, $nr];
+  $p                                                                            # Return new root
+ }
+
+sub splitFullNode($)                                                            #P Split a full node and return the new parent or return the existing node if it does not need to be split
+ {my ($node) = @_;                                                              # Node to split
+  @_ == 1 or confess;
+  return $node unless $node->node->@* == $keysPerNode + 1;                      # Check size
+  return splitNode     $node if $node->up;                                      # Node has a parent
+  return splitRootNode $node                                                    # Root node
+ }
+
+sub splitLeafNode($)                                                            #P Split a full leaf node in assuming it has a non full parent
+ {my ($node) = @_;                                                              # Node to split
+  @_ == 1 or confess;
+
+  confess unless my $p = $node->up;                                             # Check parent
+  confess unless $node->keys->@* == $keysPerNode + 1;                           # Check size
+
+  my ($kl, $k, $kr) = separateKeys $node;
+  my ($dl, $d, $dr) = separateData $node;
+
+  my ($nl, $nr)     = (new, new);
+  $nl->up = $nr->up = $p;
+  $nl->keys = $kl; $nl->data = $dl;
+  $nr->keys = $kr; $nr->data = $dr;
+
+  my @n = $p->node->@*;
+  for my $i(keys @n)                                                            # Add new child to parent known to be not full
+   {if ($n[$i] == $node)
+     {splice $p->keys->@*, $i, 0, $k;
+      splice $p->data->@*, $i, 0, $d;
+      splice $p->node->@*, $i, 1, $nl, $nr;
+      return $p;                                                                # Return parent as we have delete the original node
+     }
+   }
+  confess;
+ }
+
+sub splitRootLeafNode($)                                                        #P Split a full root that is also a leaf
+ {my ($node) = @_;                                                              # Node to split
+  @_ == 1 or confess;
+
+  confess if $node->up;                                                         # Check parent
+  confess unless $node->keys->@* == $keysPerNode + 1;                           # Check size
+
+  my ($kl, $k, $kr) = separateKeys $node;
+  my ($dl, $d, $dr) = separateData $node;
+
+  my $p = new;
+  my ($nl, $nr)     = (new, new);
+  $nl->up = $nr->up = $p;
+  $nl->keys = $kl; $nl->data = $dl;
+  $nr->keys = $kr; $nr->data = $dr;
+
+  $p->keys = [$k];
+  $p->data = [$d];
+  $p->node = [$nl, $nr];
+  $p                                                                            # Return new root
+ }
+
+sub splitFullLeafNode($)                                                        #P Split a full leaf and return the new parent or return the existing node if it does not need to be split
+ {my ($node) = @_;                                                              # Node to split
+  @_ == 1 or confess;
+
+  return $node if $node->keys->@* <= $keysPerNode;                              # Check size
+  return splitLeafNode     $node if $node->up;                                  # Node has a parent
+  return splitRootLeafNode $node                                                # Root node
+ }
+
+sub findAndSplit($$)                                                            # Find a key in a tree splitting full nodes along the path to the key
  {my ($tree, $key) = @_;                                                        # Tree, key
   @_ == 2 or confess;
-  my @k = $tree->keys->@*;
 
-  if ($key < $k[0])                                                            # Less than smallest key in node
+  $tree = splitFullNode $tree;
+  confess unless my @k = $tree->keys->@*;                                       # We should have at least one key in the tree
+
+  if ($key < $k[0])                                                             # Less than smallest key in node
    {if (my $node = $tree->node->[0])
      {return __SUB__->($node, $key);
      }
     return (-1, $tree, 0);
    }
 
-  if ($key > $k[-1])                                                           # Greater than largest key in node
+  if ($key > $k[-1])                                                            # Greater than largest key in node
+   {if (my $node = $tree->node->[-1])                                           # Step through
+     {return __SUB__->($node, $key);
+     }
+    return (+1, $tree, $#k);                                                    # Leaf
+   }
+
+  for my $i(keys @k)                                                            # Search the keys in this node
+   {my $s = $k[$i] cmp $key;                                                    # Compare key
+    return (0, $tree, $i) if $s == 0;                                           # Found key
+    if ($s < 0)                                                                 # Less than current key
+     {if (my $node = $tree->node->[$i])                                         # Step through
+       {return __SUB__->($node, $key);
+       }
+      return (-1, $tree, $i);                                                   # Leaf
+     }
+   }
+  confess 'Not possible';
+ } # findAndSplit
+
+sub find($$)                                                                    # Find a key in a tree returning (last comparison, the last node searched, the index of the last key compared)
+ {my ($tree, $key) = @_;                                                        # Tree, key
+  @_ == 2 or confess;
+  my @k = $tree->keys->@*;
+
+  if ($key < $k[0])                                                             # Less than smallest key in node
+   {if (my $node = $tree->node->[0])
+     {return __SUB__->($node, $key);
+     }
+    return (-1, $tree, 0);
+   }
+
+  if ($key > $k[-1])                                                            # Greater than largest key in node
    {if (my $node = $tree->node->[-1])
      {return __SUB__->($node, $key);
      }
-    return (+1, $tree, -1);
+    return (+1, $tree, $#k);
    }
 
   for my $i(keys @k)                                                            # Search the keys in this node
@@ -66,85 +281,77 @@ sub find($$)                                                                    
   confess 'Not possible';
  } # find
 
-sub insertIntoNode($$$$$)                                                       #P Insert a (key, data) pair into a node that is known not be full at the specified point
- {my ($parent, $child, $at, $key, $data) = @_;                                  # Parent, child, insertion point, key, data
-  @_ == 5 or confess;
-  splice $parent->keys->@*, $at,   0, $key;
-  splice $parent->data->@*, $at,   0, $data;
-  splice $parent->node->@*, $at+1, 0, $child;
-  $child->up = $parent;
- }
+sub insert($$$)                                                                 # Insert a key and data into a tree
+ {my ($tree, $key, $data) = @_;                                                 # Tree, key, data
+  @_ == 3 or confess;
 
-sub findSplit($$)                                                               #P Locate the index at which the parent splits to the child
- {my ($parent, $child) = @_;                                                    # Parent node, child node
-  @_ == 2 or confess;
-
-  my (@k) = $parent->keys->@*;                                                  # Parent keys
-  my ($k) =  $child->keys->@*;                                                  # First child key
-  return 0 if $k < $k[0];
-  for my $i(keys @k)
-   {return $i if $k < $k[$i];
+  if (!$tree->keys->@*)                                                         # Empty tree
+   {push $tree->keys->@*, $key;
+    push $tree->data->@*, $data;
+    return $tree;
    }
-  scalar @k;
- }
 
-sub splitNode($$)                                                               #P Split a node at the indicated index
- {my ($node, $split) = @_;                                                      # Node to split, split point
-  @_ == 2 or confess;
+  my ($compare, $node, $index) = findAndSplit($tree, $key);                     # Check for existing key
 
-  my ($o, $n) = ($node, new);                                                   # The new node juxtaposed with the old node
-  $n->up    = $o->up;
-  $n->keys  = [splice $o->keys->@*, $split];
-  $n->data  = [splice $o->data->@*, $split];
-  $n
- }
-
-sub insert($)                                                                   #P Insert a child node and return the new tree so formed.
- {my ($child) = @_;                                                             # Child node
-  @_ == 1 or confess;
-
-  my $parent = $child->up;
-  return $child unless $parent;                                                 # We have reached the top
-
-  my $split = findSplit($parent, $child);                                       # The point at which to split the parent to reach the child
-
-  my $k = shift $child->keys->@*;                                               # Key to add to parent
-  my $d = shift $child->data->@*;
-
-  if ($parent->keys->@* < $keysPerNode)                                         # Insert
-   {insertIntoNode($parent, $child, $split, $k, $d);
+  if ($compare == 0)                                                            # Found an equal key whose data we can update
+   {$node->data->[$index] = $data;
+    return root $node;
    }
-  else                                                                          # Split and insert
-   {my $n = splitNode($parent, $split);
-    if (my $p = $parent->up)
-     {insertIntoNode($p, $n, $split, $k, $d);
-      __SUB__->($n);
-     }
-    else                                                                        # New root
-     {my $p = new;
-      $p->keys = [$k];
-      $p->data = [$d];
-      $p->node = [$parent, $n];
-      $parent->up = $n->up = $p;
-     }
+
+  if ($compare < 0)                                                             # Insert into a leaf node below the index
+   {my @k = $node->keys->@*; my @d = $node->data->@*;
+    $node->keys = [@k[0..$index-1], $key,  @k[$index..$#k]];
+    $node->data = [@d[0..$index-1], $data, @d[$index..$#d]];
    }
-  $parent->root;                                                                # Return new tree
+  else                                                                          # Insert into a leaf node node above the index
+   {my @k = $node->keys->@*; my @d = $node->data->@*;
+    $node->keys = [@k[0..$index], $key,  @k[$index+1..$#k]];
+    $node->data = [@d[0..$index], $data, @d[$index+1..$#d]];
+   }
+  root splitFullLeafNode $node
  }
 
 sub printKeysAndData($)                                                         # Print the mapping from keys to data in a tree
  {my ($t) = @_;                                                                 # Tree
   confess unless $t;
   my @s;
-  my sub print($$)
+  my $print = sub
    {my ($t, $in) = @_;
-    return unless $t;
-    __SUB__->($t->left, $in+1);                                                 # Left
-    push @s, [$t->keys->[$_], $t->data->[$_]] for keys $t->keys->@*;            # Find key in node
-    __SUB__->($t->right,   $in+1);                                              # Right
-   }
-  print $t, 0;
-  formatTableBasic(\@s)
- } # printKeysAndData
+    return unless $t and $t->keys;
+    push @s, join ' ', ('  'x$in), $t->keys->@*;                                # Print keys
+
+    if (my $nodes = $t->node)                                                   # Each key
+     {for my $n($nodes->@*)                                                     # Each key
+       {__SUB__->($n, $in+1);                                                   # Sub tree
+       }
+     }
+   };
+
+  $print->($t, 0);
+
+  join "\n", @s;
+ }
+
+sub printKeys($)                                                                # Print the keys in a tree
+ {my ($t) = @_;                                                                 # Tree
+  confess unless $t;
+  my @s;
+  my $print = sub
+   {my ($t, $in) = @_;
+    return unless $t and $t->keys;
+    push @s, join ' ', ('  'x$in), $t->keys->@*;                                # Print keys
+
+    if (my $nodes = $t->node)                                                   # Each key
+     {for my $n($nodes->@*)                                                     # Each key
+       {__SUB__->($n, $in+1);                                                   # Sub tree
+       }
+     }
+   };
+
+  $print->($t, 0);
+
+  join "\n", @s, '';
+ }
 
 #d
 #-------------------------------------------------------------------------------
@@ -247,35 +454,46 @@ my $start = time;                                                               
 
 eval {goto latest} if !caller(0) and -e "/home/phil";                           # Go to latest test if specified
 
-if (1) {                                                                        # Room in parent so we can insert the child without splitting
-  my $p = new;
-     $p->keys = [map {$keysPerNode * 2 * $_} 1..$keysPerNode-1];
-     $p->data = [map {$keysPerNode * 2 * $_} 1..$keysPerNode-1];
-     $p->node = [map {undef}                 0..$keysPerNode-1];
-  my $c = new;
-     $c->up    = $p;
-     $c->keys = [map {$keysPerNode * 2 + $_} 1..$keysPerNode];
-     $c->data = [map {$keysPerNode * 2 + $_} 1..$keysPerNode];
-  my $t = insert $c;
-  is_deeply $t->keys,  [8, 9, 16, 24];
-  is_deeply $t->node->[2]->keys, [10, 11, 12];
- }
-
-if (1) {                                                                        # Room in parent so we can insert the child without splitting
-  my $p = new;
-     $p->keys = [map {$keysPerNode * 2 * $_} 1..$keysPerNode];
-     $p->data = [map {$keysPerNode * 2 * $_} 1..$keysPerNode];
-     $p->node = [map {undef}                 0..$keysPerNode];
-  my $c = new;
-     $c->up    = $p;
-     $c->keys = [map {$keysPerNode * 2 + $_} 1..$keysPerNode];
-     $c->data = [map {$keysPerNode * 2 + $_} 1..$keysPerNode];
-  my $t = insert $c;
-  is_deeply $t->keys, [9];
-  is_deeply $t->node->[0]->keys, [8];
-  is_deeply $t->node->[1]->keys->[0], 16;
-  ok $t->node->[0]->up == $t;
-  ok $t->node->[1]->up == $t;
+if (1) {                                                                        #Tinsert
+  local $keysPerNode = 15;
+  my $t = new;
+  for my $i(1..256)
+   {$t = insert($t, $i, 2*$i);
+   }
+  is_deeply $t->printKeys, <<END;
+ 72 144
+   9 18 27 36 45 54 63
+     1 2 3 4 5 6 7 8
+     10 11 12 13 14 15 16 17
+     19 20 21 22 23 24 25 26
+     28 29 30 31 32 33 34 35
+     37 38 39 40 41 42 43 44
+     46 47 48 49 50 51 52 53
+     55 56 57 58 59 60 61 62
+     64 65 66 67 68 69 70 71
+   81 90 99 108 117 126 135
+     73 74 75 76 77 78 79 80
+     82 83 84 85 86 87 88 89
+     91 92 93 94 95 96 97 98
+     100 101 102 103 104 105 106 107
+     109 110 111 112 113 114 115 116
+     118 119 120 121 122 123 124 125
+     127 128 129 130 131 132 133 134
+     136 137 138 139 140 141 142 143
+   153 162 171 180 189 198 207 216 225 234 243
+     145 146 147 148 149 150 151 152
+     154 155 156 157 158 159 160 161
+     163 164 165 166 167 168 169 170
+     172 173 174 175 176 177 178 179
+     181 182 183 184 185 186 187 188
+     190 191 192 193 194 195 196 197
+     199 200 201 202 203 204 205 206
+     208 209 210 211 212 213 214 215
+     217 218 219 220 221 222 223 224
+     226 227 228 229 230 231 232 233
+     235 236 237 238 239 240 241 242
+     244 245 246 247 248 249 250 251 252 253 254 255 256
+END
  }
 
 lll "Success:", time - $start;
