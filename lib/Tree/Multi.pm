@@ -456,10 +456,11 @@ eval {goto latest} if !caller(0) and -e "/home/phil";                           
 
 if (1) {                                                                        #Tinsert
   local $keysPerNode = 15;
+
   my $t = new;
-  for my $i(1..256)
-   {$t = insert($t, $i, 2*$i);
-   }
+
+  $t = insert($t, $_, 2*$_) for 1..256;
+
   is_deeply $t->printKeys, <<END;
  72 144
    9 18 27 36 45 54 63
