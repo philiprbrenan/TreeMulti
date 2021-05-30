@@ -237,7 +237,7 @@ sub findAndSplit($$)                                                            
    }
 
   for my $i(keys @k)                                                            # Search the keys in this node
-   {my $s = $k[$i] cmp $key;                                                    # Compare key
+   {my $s = $k[$i] <=> $key;                                                    # Compare key
     return (0, $tree, $i) if $s == 0;                                           # Found key
     if ($s < 0)                                                                 # Less than current key
      {if (my $node = $tree->node->[$i])                                         # Step through
@@ -254,14 +254,14 @@ sub find($$)                                                                    
   @_ == 2 or confess;
   my @k = $tree->keys->@*;
 
-  if ($key lt $k[0])                                                            # Less than smallest key in node
+  if ($key < $k[0])                                                             # Less than smallest key in node
    {if (my $node = $tree->node->[0])
      {return __SUB__->($node, $key);
      }
     return undef;
    }
 
-  if ($key gt $k[-1])                                                           # Greater than largest key in node
+  if ($key > $k[-1])                                                           # Greater than largest key in node
    {if (my $node = $tree->node->[-1])
      {return __SUB__->($node, $key);
      }
@@ -269,8 +269,9 @@ sub find($$)                                                                    
    }
 
   for my $i(keys @k)                                                            # Search the keys in this node
-   {my $s = $k[$i] cmp $key;                                                    # Compare key
-say STDERR "BBBB i=$i   $k[$i] cmp $key == $s";
+   {my $k = $tree->keys->[$i];
+    my $d = $tree->data->[$i];
+    my $s = $key <=> $k[$i];                                                    # Compare key
     return $tree->data->[$i] if $s == 0;                                        # Found key
     if ($s < 0)                                                                 # Less than current key
      {if (my $node = $tree->node->[$i])
@@ -455,7 +456,7 @@ my $start = time;                                                               
 
 eval {goto latest} if !caller(0) and -e "/home/phil";                           # Go to latest test if specified
 
-if (1) {                                                                        #Tinsert
+if (1) {                                                                        #Tinsert #TprintKeys
   local $keysPerNode = 15;
 
   my $t = new; my $N = 256;
@@ -497,11 +498,10 @@ if (1) {                                                                        
      244 245 246 247 248 249 250 251 252 253 254 255 256
 END
 
-  if (1)                                                                        #
+  if (1)                                                                        #Tfind
    {my $n = 0;
-    for my $i(1..$N)                                                            #
+    for my $i(1..$N)
      {my $ii = $t->find($i);
-      say STDERR "AAAA ", dump($ii);
        ++$n if $t->find($i) eq 2 * $i;
      }
     ok $n == $N;
