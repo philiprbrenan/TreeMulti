@@ -680,7 +680,7 @@ sub T($$)                                                                       
  {my ($tree, $expected) = @_;                                                   # Tree
   confess unless ref($tree);
   my $got = $tree->printKeys;
-  my $s = showGotVersusWanted($got, $expected);
+  my $s = $develop ? showGotVersusWanted($got, $expected) : $got eq $expected;
   return !$s unless $develop and $s;
   owf($logFile, $got);
   confess "$s\n";
