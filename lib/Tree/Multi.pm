@@ -794,8 +794,6 @@ sub T($$)                                                                       
   my $got = $tree->printKeys;
   my $s = showGotVersusWanted($got, $expected);
   return !$s unless $develop and $s;
-  say STDERR "GGGGOT  ", dump($got);
-  say STDERR "EXPECTED", dump($expected);
   owf($logFile, $got);
   confess "$s\n";
  }
