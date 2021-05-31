@@ -393,32 +393,6 @@ sub mergeRoot($$)                                                               
   $_->up = $tree for $tree->node->@*;
  }
 
-sub mergeRoot22($$)                                                             #P Merge the root node
- {my ($tree, $child) = @_;                                                      # Tree, the child to merge into
-  @_ == 2 or confess;
-
-  confess if $tree->up;                                                         # Must be at the root
-  confess if $tree->leaf;                                                       # A root that is a leaf cannot be merged
-  confess unless $tree->keys->@* == 1;                                          # Root must have only one key
-  confess unless (my $l = $tree->node->[0])->halfNode;
-  confess unless (my $r = $tree->node->[1])->halfNode;
-
-  if ($l == $child)                                                             # Merge into left child
-   {push $l->keys->@*, $tree->keys->@*,  $r->keys->@*;
-    push $l->data->@*, $tree->data->@*,  s$r->data->@*;
-    push $l->node->@*, $r->node->@*;
-    $_->up = $l for $r->node->@*;
-    $l->up = undef;
-   }
-  else                                                                          # Merge into right
-   {unshift $r->keys->@*, $l->keys->@*, $tree->keys->@*;
-    unshift $r->data->@*, $l->data->@*, $tree->data->@*;
-    unshift $r->node->@*, $l->node->@*;
-    $_->up = $r for $l->node->@*;
-    $r->up = undef;
-   }
- }
-
 sub mergeOrFill($)                                                              #P make a node larger than a half node
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
