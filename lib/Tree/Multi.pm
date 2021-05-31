@@ -381,8 +381,8 @@ sub fillLeafFromLeftOrRight($$)                                                 
   if ($dir)                                                                     # Fill from right
    {$i < $p->node->@* - 1 or confess;                                           # Cannot fill from right
     my $f = $p->node->[$i+1];                                                   # Leaf on right
-    push $n->keys->@*, $p->keys->[$i+1]; $p->keys->[$i+1] = shift $f->keys->@*; # Transfer key
-    push $n->data->@*, $p->data->[$i+1]; $p->data->[$i+1] = shift $f->data->@*; # Transfer data
+    push $n->keys->@*, $p->keys->[$i]; $p->keys->[$i] = shift $f->keys->@*;     # Transfer key
+    push $n->data->@*, $p->data->[$i]; $p->data->[$i] = shift $f->data->@*;     # Transfer data
    }
   else                                                                          # Fill from left
    {$i > 0 or confess;                                                          # Cannot fill from left
@@ -658,7 +658,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
-if ($^O =~ m(bsd|linux)i) {plan tests => 6}                                     # Supported systems
+if ($^O =~ m(bsd|linux)i) {plan tests => 7}                                     # Supported systems
 else
  {plan skip_all =>qq(Not supported on: $^O);
  }
@@ -796,6 +796,20 @@ END
      13
      15 16
 END
+
+  $t->findNode(13)->fillLeafFromRight;
+  is_deeply $t->printKeys, <<END;
+ 6
+   3
+     1 2
+     4 5
+   9 12 15
+     7 8
+     10 11
+     13 14
+     16
+END
+
  }
 
 lll "Success:", time - $start;
