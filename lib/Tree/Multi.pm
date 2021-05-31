@@ -871,7 +871,7 @@ if (1) {                                                                        
      16
 END
 
-  $t->delete(16); ok T($t, <<END);
+  $t->delete(16);  ok T($t, <<END);
  6
    3
      1 2
@@ -882,14 +882,8 @@ END
      13
      15
 END
-say STDERR "XXXX";
 
-  say STDERR "AAAAA\n", $t->printKeys;
-$debug = 1;
-  $t->delete(15);
-  say STDERR "BBBBB\n", $t->printKeys;
-
-  ok T($t, <<END);
+  $t->delete(15);  ok T($t, <<END);
  6
    3
      1 2
@@ -898,6 +892,48 @@ $debug = 1;
      7 8
      10 11
      13 14
+END
+
+  $t->delete(14);  ok T($t, <<END);
+ 6
+   3
+     1 2
+     4 5
+   9 12
+     7 8
+     10 11
+     13
+END
+
+  $t->delete(13);  ok T($t, <<END);
+ 6
+   3
+     1 2
+     4 5
+   9 11
+     7 8
+     10
+     12
+END
+
+  $t->delete(12);  ok T($t, <<END);
+ 6
+   3
+     1 2
+     4 5
+   9
+     7 8
+     10 11
+END
+
+  $t->delete(11);  ok T($t, <<END);
+ 6
+   3
+     1 2
+     4 5
+   9
+     7 8
+     10
 END
  }
 
