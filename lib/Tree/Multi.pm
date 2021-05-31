@@ -37,11 +37,33 @@ sub check($)                                                                    
   confess unless $tree->keys->@*+1 == @n;
  }
 
+sub minimumNumberOfKeys  {int $keysPerNode / 2}                                 #P Minimum number of keys per node
+sub maximumNumberOfKeys  {    $keysPerNode}                                     #P Maximum number of keys per node
+sub maximumNumberOfNodes {    $keysPerNode + 1}                                 #P Maximum number of children per parent
+
+sub fullNode($)                                                                 #P Confirm that a node is full
+ {my ($tree) = @_;                                                              # Tree
+  @_ == 1 or confess;
+  $tree->keys->@* == maximumNumberOfKeys
+ }
+
+sub halfNode($)                                                                 #P Confirm that a node is half full
+ {my ($tree) = @_;                                                              # Tree
+  @_ == 1 or confess;
+  $tree->keys->@* == minimumNumberOfKeys
+ }
+
 sub root($)                                                                     # Return the root node of a tree
  {my ($tree) = @_;                                                              # Tree
   confess unless $tree;
   for(; $tree->up; $tree = $tree->up) {}
   $tree
+ }
+
+sub leaf($)                                                                     # Confirm that the tree is a leaf
+ {my ($tree) = @_;                                                              # Tree
+  @_ == 1 or confess;
+  ! scalar $tree->node->@*                                                      # No children so it must be a leaf
  }
 
 sub separateKeys($)                                                             #P Return ([lower], center, [upper]) keys
@@ -78,7 +100,7 @@ sub separateNode($)                                                             
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
   my @n = $node->node->@*;
-  @n == $keysPerNode + 1 or confess;
+  @n == maximumNumberOfNodes or confess;
 
   my @l; my @r;
   while(@n > 1)
@@ -103,7 +125,7 @@ sub splitNode($)                                                                
   @_ == 1 or confess;
 
   confess unless my $p = $node->up;                                             # Check parent
-  confess unless $node->node->@* == $keysPerNode + 1;                           # Check size
+  confess unless $node->node->@* == maximumNumberOfNodes;                           # Check size
 
   my ($kl, $k, $kr) = separateKeys $node;
   my ($dl, $d, $dr) = separateData $node;
@@ -131,7 +153,7 @@ sub splitRootNode($)                                                            
   @_ == 1 or confess;
 
   confess if $node->up;                                                         # Check parent
-  confess unless $node->node->@* == $keysPerNode + 1;                           # Check size
+  confess unless $node->node->@* == maximumNumberOfNodes;                           # Check size
 
   my ($kl, $k, $kr) = separateKeys $node;
   my ($dl, $d, $dr) = separateData $node;
@@ -152,7 +174,7 @@ sub splitRootNode($)                                                            
 sub splitFullNode($)                                                            #P Split a full node and return the new parent or return the existing node if it does not need to be split
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
-  return $node unless $node->node->@* == $keysPerNode + 1;                      # Check size
+  return $node unless $node->node->@* == maximumNumberOfNodes;                      # Check size
   return splitNode     $node if $node->up;                                      # Node has a parent
   return splitRootNode $node                                                    # Root node
  }
@@ -162,7 +184,7 @@ sub splitLeafNode($)                                                            
   @_ == 1 or confess;
 
   confess unless my $p = $node->up;                                             # Check parent
-  confess unless $node->keys->@* == $keysPerNode + 1;                           # Check size
+  confess unless $node->keys->@* == maximumNumberOfNodes;                           # Check size
 
   my ($kl, $k, $kr) = separateKeys $node;
   my ($dl, $d, $dr) = separateData $node;
@@ -189,7 +211,7 @@ sub splitRootLeafNode($)                                                        
   @_ == 1 or confess;
 
   confess if $node->up;                                                         # Check parent
-  confess unless $node->keys->@* == $keysPerNode + 1;                           # Check size
+  confess unless $node->keys->@* == maximumNumberOfNodes;                           # Check size
 
   my ($kl, $k, $kr) = separateKeys $node;
   my ($dl, $d, $dr) = separateData $node;
@@ -210,7 +232,7 @@ sub splitFullLeafNode($)                                                        
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
 
-  return $node if $node->keys->@* <= $keysPerNode;                              # Check size
+  return $node if $node->keys->@* <= maximumNumberOfKeys;                       # Check size
   return splitLeafNode     $node if $node->up;                                  # Node has a parent
   return splitRootLeafNode $node                                                # Root node
  }
@@ -237,7 +259,7 @@ sub findAndSplit($$)                                                            
    }
 
   for my $i(keys @k)                                                            # Search the keys in this node
-   {my $s = $k[$i] <=> $key;                                                    # Compare key
+   {my $s = $key <=> $k[$i];                                                    # Compare key
     return (0, $tree, $i) if $s == 0;                                           # Found key
     if ($s < 0)                                                                 # Less than current key
      {if (my $node = $tree->node->[$i])                                         # Step through
@@ -269,9 +291,7 @@ sub find($$)                                                                    
    }
 
   for my $i(keys @k)                                                            # Search the keys in this node
-   {my $k = $tree->keys->[$i];
-    my $d = $tree->data->[$i];
-    my $s = $key <=> $k[$i];                                                    # Compare key
+   {my $s = $key <=> $k[$i];                                                    # Compare key
     return $tree->data->[$i] if $s == 0;                                        # Found key
     if ($s < 0)                                                                 # Less than current key
      {if (my $node = $tree->node->[$i])
@@ -282,6 +302,199 @@ sub find($$)                                                                    
    }
   confess 'Not possible';
  } # find
+
+sub findNode($$)                                                                # Find the node containing a key.
+ {my ($tree, $key) = @_;                                                        # Tree, key
+  @_ == 2 or confess;
+  my @k = $tree->keys->@*;
+
+  if ($key < $k[0])                                                             # Less than smallest key in node
+   {if (my $node = $tree->node->[0])
+     {return __SUB__->($node, $key);
+     }
+    return undef;
+   }
+
+  if ($key > $k[-1])                                                           # Greater than largest key in node
+   {if (my $node = $tree->node->[-1])
+     {return __SUB__->($node, $key);
+     }
+    return undef;
+   }
+
+  for my $i(keys @k)                                                            # Search the keys in this node
+   {my $s = $key <=> $k[$i];                                                    # Compare key
+    return $tree if $s == 0;                                                    # Found key so return node
+    if ($s < 0)                                                                 # Less than current key
+     {if (my $node = $tree->node->[$i])
+       {return __SUB__->($node, $key);
+       }
+      return undef;
+     }
+   }
+  confess 'Not possible';
+ } # find
+
+sub indexInParent($)                                                            #P Get the index of a node in its parent
+ {my ($tree) = @_;                                                              # Tree
+  @_ == 1 or confess;
+  my $p = $tree->up;
+  my @n = $p->node->@*;
+  for my $i(keys @n)
+   {return $i if $n[$i] == $tree;
+   }
+  confess
+ }
+
+sub mergeableWithPrevOrNextOnDelete($)                                          #P Check whether a node can be merged with its previous or next element returning a pair of indices defining the mergable elements as seen by the parent or an empty pair if no elements are mergeable.
+ {my ($tree) = @_;                                                              # Tree
+  @_ == 1 or confess;
+  my $N = $tree->keys->@*;
+  return 0 if $N == $keysPerNode;                                               # Node is full so it cannot be merged
+  my $p = $tree->up;
+  my $n = $p->nodes->@* - 1;
+  my $K = maximumNumberOfKeys;
+  if (my $i = $tree->indexInParent)
+   {return ($i-1, $i) if $i >  0 and $p->node->[$i-1]->keys->@* + $N < $K;      # Less than because we are going to include the parent key
+    return ($i, $i+1) if $i < $n and $p->node->[$i+1]->keys->@* + $N < $K;
+    return ()
+   }
+  confess
+ }
+
+sub mergeablePairOfChildrenOnDelete($$)                                         #P Check whether the children on either side of a key can be merged before deleting the indexed key
+ {my ($tree, $index) = @_;                                                      # Tree, index of key
+  @_ == 2 or confess;
+  $tree->node->[$index]->keys->@* + $tree->node->[$index+1]->keys->@* <=        # Less than or equal because we will be deleting the parent key
+    maximumNumberOfKeys;
+ }
+
+sub fillLeafFromLeftOrRight($$)                                                 #P Fill a leaf from the leaf
+ {my ($n, $dir) = @_;                                                           # Node to fill, 0 from left or 1 from right
+  @_ == 2 or confess;
+
+  confess unless    $n->leaf;                                                   # Confirm we are on a leaf
+  confess unless    $n->halfNode;                                               # Confirm leaf is half full
+  confess unless my $p = $n->up;                                                # Parent of leaf
+  my $i = $n->indexInParent;                                                    # Index of leaf in parent
+
+  if ($dir)                                                                     # Fill from right
+   {$i < $p->node->@* - 1 or confess;                                           # Cannot fill from right
+    my $f = $p->node->[$i+1];                                                   # Leaf on right
+    push $n->keys->@*, $p->keys->[$i+1]; $p->keys->[$i+1] = shift $f->keys->@*; # Transfer key
+    push $n->data->@*, $p->data->[$i+1]; $p->data->[$i+1] = shift $f->data->@*; # Transfer data
+   }
+  else                                                                          # Fill from left
+   {$i > 0 or confess;                                                          # Cannot fill from left
+    my $f = $p->node->[$i-1];                                                   # Leaf on leaf
+    unshift $n->keys->@*, $p->keys->[$i-1];$p->keys->[$i-1] = pop $f->keys->@*; # Transfer key
+    unshift $n->data->@*, $p->data->[$i-1];$p->data->[$i-1] = pop $f->data->@*; # Transfer data
+   }
+ }
+
+sub fillLeafFromLeft($)                                                         #P Fill a leaf from the left
+ {my ($n) = @_;                                                                 # Node to fill
+  fillLeafFromLeftOrRight($n, 0)
+ }
+
+sub fillLeafFromRight($)                                                        #P Fill a leaf from the right
+ {my ($n) = @_;                                                                 # Node to fill
+  fillLeafFromLeftOrRight($n, 1)
+ }
+
+sub deleteElement($$)                                                           #P Delete an element
+ {my ($tree, $i) = @_;                                                          # Tree, index to delete at
+  @_ == 2 or confess;
+
+  if ($tree->leaf)                                                              # Delete from a leaf
+   {        splice $tree->keys->@*, $i, 1;                                      # Remove key
+    my $d = splice $tree->data->@*, $i, 1;                                      # Remove data
+
+    if    ($tree->keys->@* > minimumNumberOfKeys) {}                            # No need to merge
+    elsif (my @i = mergeableWithPrevOrNextOnDelete($tree))                      # Mergeable with neighboring leaf
+     {mergeNeigboringLeaves($tree, @i);
+     }
+    else                                                                        # Either neighboring leaf can spare a key so rotate a key from the previous element through parent
+     {my $p = $tree->indexInParent;
+      my $P = $tree->up;
+      if ($p > 0)                                                               # Rotate a key from the previous leaf
+       {unshift $tree->keys->@*, $P->keys->[$p]; $P->keys->[$p] = pop $P->node->[$p-1]->keys->@*;
+        unshift $tree->data->@*, $P->data->[$p]; $P->data->[$p] = pop $P->node->[$p-1]->data->@*;
+       }
+      else                                                                      # Rotate a key from the next leaf
+       {push $tree->keys->@*, $P->keys->[$p]; $P->keys->[$p] = shift $P->node->[$p+1]->keys->@*;
+        push $tree->data->@*, $P->data->[$p]; $P->data->[$p] = shift $P->node->[$p+1]->data->@*;
+       }
+     }
+    return $d;                                                                  # Return data from deleted element
+   }
+=pod
+
+  elsif ($tree->mergeablePairOfChildrenOnDelete($i))                            # Delete from a non leaf by merging
+   {        splice $tree->keys->@*, $i,  1;                                     # Remove key
+    my $d = splice $tree->data->@*, $i,  1;                                     # Remove data
+    my $r = splice $tree->node->@*, $i + 1, 1;                                  # Right node that we are going to merge into the left node
+
+    my $l = $tree->node->[$i];
+
+    push $l->keys->@*, $r->keys->@*;
+    push $l->data->@*, $r->data->@*;
+    push $l->data->@*, $r->data->@*;
+
+     if deleteElementNoCheck ($tree, $i);
+mergeablePairOfChildrenOnDelete
+    if    ($tree->keys->@* > $keysPerNode / 2) {}                               # No need to merge
+    elsif (my @i = mergeableWithPrevOrNextOnDelete($tree))                      # Mergeable with neighboring leaf
+     {mergeNeigboringLeaves($tree, @i);
+     }
+    else                                                                        # Either neighboring leaf can spare a key so rotate a key from the previous element through parent
+     {my $p = $tree->indexInParent;
+      my $P = $tree->up;
+      if ($p > 0)                                                               # Rotate a key from the previous leaf
+       {unshift $tree->keys->@*, $P->keys->[$p]; $P->keys->[$p] = pop $P->node->[$p-1]->keys->@*;
+        unshift $tree->data->@*, $P->data->[$p]; $P->data->[$p] = pop $P->node->[$p-1]->data->@*;
+       }
+      else                                                                      # Rotate a key from the next leaf
+       {push $tree->keys->@*, $P->keys->[$p]; $P->keys->[$p] = shift $P->node->[$p+1]->keys->@*;
+        push $tree->data->@*, $P->data->[$p]; $P->data->[$p] = shift $P->node->[$p+1]->data->@*;
+       }
+     }
+   }
+=cut
+  1
+ }
+
+sub delete($$)                                                                  # Find a key in a tree returning its associated data or undef if the key does not exist
+ {my ($tree, $key) = @_;                                                        # Tree, key
+  @_ == 2 or confess;
+  my @k = $tree->keys->@*;
+
+  if ($key < $k[0])                                                             # Less than smallest key in node
+   {if (my $node = $tree->node->[0])
+     {return __SUB__->($node, $key);
+     }
+    return undef;
+   }
+
+  if ($key > $k[-1])                                                            # Greater than largest key in node
+   {if (my $node = $tree->node->[-1])
+     {return __SUB__->($node, $key);
+     }
+    return undef;
+   }
+
+  for my $i(keys @k)                                                            # Search the keys in this node
+   {my $s = $key <=> $k[$i];                                                    # Compare key
+    return deleteElement($tree, $i) if $s == 0;                                 # Delete found key
+    if ($s < 0)                                                                 # Less than current key
+     {if (my $node = $tree->node->[$i])
+       {return __SUB__->($node, $key);
+       }
+      return undef;
+     }
+   }
+  confess 'Not possible';
+ } # delete
 
 sub insert($$$)                                                                 # Insert a key and data into a tree
  {my ($tree, $key, $data) = @_;                                                 # Tree, key, data
@@ -445,7 +658,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
-if ($^O =~ m(bsd|linux)i) {plan tests => 2}                                     # Supported systems
+if ($^O =~ m(bsd|linux)i) {plan tests => 6}                                     # Supported systems
 else
  {plan skip_all =>qq(Not supported on: $^O);
  }
@@ -461,7 +674,7 @@ if (1) {                                                                        
 
   my $t = new; my $N = 256;
 
-  $t = insert($t, $_, 2*$_) for 1..$N;
+  $t = insert($t, $_, 2 * $_) for 1..$N;
 
   is_deeply $t->printKeys, <<END;
  72 144
@@ -506,6 +719,83 @@ END
      }
     ok $n == $N;
    }
+ }
+
+if (1) {                                                                        #Tinsert #TprintKeys  #Tfind
+  local $keysPerNode = 15;
+
+  my $t = new; my $N = 256;
+
+  $t = insert($t, $_, 2 * $_) for reverse map{scalar reverse} 1..$N;
+
+  is_deeply $t->printKeys, <<END;
+ 371
+   09 18 032 48 061 75 86 99 132 202 252 322
+     001 002 03 04 05 06 07 08
+     011 012 13 14 15 16 17
+     19 021 022 23 24 25 26 27 28 29 031
+     33 34 35 36 37 38 39 041 042 43 44 45 46 47
+     49 051 052 53 54 55 56 57 58 59
+     62 63 64 65 66 67 68 69 071 72 73 74
+     76 77 78 79 081 82 83 84 85
+     87 88 89 091 92 93 94 95 96 97 98
+     101 102 111 112 121 122 131
+     141 142 151 152 161 171 181 191 201
+     211 212 221 222 231 232 241 242 251
+     261 271 281 291 301 302 311 312 321
+     331 332 341 342 351 352 361
+   452 542 622 681 732 822 891
+     381 391 401 402 411 412 421 422 431 432 441 442 451
+     461 471 481 491 501 502 511 512 521 522 531 532 541
+     551 552 561 571 581 591 601 602 611 612 621
+     631 632 641 642 651 652 661 671
+     691 701 702 711 712 721 722 731
+     741 742 751 761 771 781 791 801 802 811 812 821
+     831 832 841 842 851 861 871 881
+     901 902 911 912 921 922 931 932 941 942 951 961 971 981 991
+END
+
+  if (1)
+   {my $n = 0;
+    for my $i(map {scalar reverse} 1..$N)
+     {my $ii = $t->find($i);
+       ++$n if $t->find($i) eq 2 * $i;
+     }
+    ok $n == $N;
+   }
+ }
+
+if (1) {                                                                        #Tdelete
+  local $keysPerNode = 3;
+
+  my $t = new; my $N = 16;
+
+  $t = insert($t, $_, 2 * $_) for 1..$N;
+
+  is_deeply $t->printKeys, <<END;
+ 6
+   3
+     1 2
+     4 5
+   9 12 15
+     7 8
+     10 11
+     13 14
+     16
+END
+
+  $t->findNode(16)->fillLeafFromLeft;
+  is_deeply $t->printKeys, <<END;
+ 6
+   3
+     1 2
+     4 5
+   9 12 14
+     7 8
+     10 11
+     13
+     15 16
+END
  }
 
 lll "Success:", time - $start;
