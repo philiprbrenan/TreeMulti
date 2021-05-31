@@ -502,12 +502,19 @@ sub mergeOrFill($)                                                              
      }
    }
   else
-   {$p = $p->mergeRoot($tree);
-    return 0;
-   }
-say STDERR "EEEE\n", $tree->printKeys if $debug;
+   {
 
+say STDERR "EEEEE000\n", $tree->printKeys if $debug;
+     $p = $p->mergeRoot($tree);
+say STDERR "EEEEE111\n", $tree->printKeys if $debug;
+#   return 0;
+   }
+
+say STDERR "FF11\n", $tree->printKeys if $debug;
+say STDERR "FF22\n", dump($tree->keys) if $debug;
+say STDERR "FF33\n", dump($tree->root) if $debug;
   my $i = $tree->indexInParent;
+say STDERR "GGGG\n", $tree->printKeys if $debug;
   if ($i > 0)                                                                   # Merge with left node
    {my $l = $p->node->[$i-1];                                                   # Left node
     my $r = $tree;                                                              # Right node
@@ -556,9 +563,11 @@ sub rightMostNode($)                                                            
 sub deleteElement($$)                                                           #P Delete an element in a node
  {my ($tree, $i) = @_;                                                          # Tree, index to delete at
   @_ == 2 or confess;
-say STDERR "CCCC\n", $tree->printKeys if $debug;
+say STDERR "CC11\n", dump($tree->root) if $debug;
+say STDERR "CC22\n", $tree->printKeys  if $debug;
   $i += $tree->mergeOrFill;                                                     # Increase by one if from left
-say STDERR "DDDD\n", $tree->printKeys if $debug;
+say STDERR "DD11\n", dump($tree->root) if $debug;
+say STDERR "dd22\n", $tree->printKeys  if $debug;
   if ($tree->leaf)                                                              # Delete from a leaf
    {       splice $tree->keys->@*, $i, 1;                                       # Remove keys
     return splice $tree->data->@*, $i, 1;                                       # Remove data and return it
@@ -979,6 +988,8 @@ END
      10
 END
 
+  $debug = 1;
+say STDERR "AAAA\n", dump($t->root);
   $t = $t->delete(10);  ok T($t, <<END);
  3 6 8
    1 2
@@ -986,18 +997,15 @@ END
    7
    9
 END
+say STDERR "BBBB ", dump($t->root);
+exit;
 
-  $debug = 1;
-say STDERR "AAAA\n", dump($t);
-say STDERR "AAAA delete 9\n", $t->printKeys;
   $t = $t->delete(9); ok T($t, <<END);
  3 6 8
    1 2
    4 5
    7
 END
-say STDERR "BBBB ", dump($t);
-exit;
 
   $t = $t->delete(8); ok T($t, <<END);
  3 6 5
