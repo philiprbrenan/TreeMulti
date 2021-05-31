@@ -805,7 +805,7 @@ if (1) {                                                                        
      16
 END
 
-  ok $t->find(16); $t = $t->delete(16);   ok !$t->find(16); ok T($t, <<END);
+  ok $t->find(16); $t = $t->delete(16);  ok !$t->find(16); ok T($t, <<END);
  6
    3
      1 2
@@ -817,7 +817,7 @@ END
      15
 END
 
-  ok $t->find(15); $t = $t->delete(15);   ok !$t->find(15); ok T($t, <<END);
+  ok $t->find(15); $t = $t->delete(15);  ok !$t->find(15); ok T($t, <<END);
  6
    3
      1 2
@@ -828,7 +828,7 @@ END
      13 14
 END
 
-  ok $t->find(14); $t = $t->delete(14);   ok !$t->find(14); ok T($t, <<END);
+  ok $t->find(14); $t = $t->delete(14);  ok !$t->find(14); ok T($t, <<END);
  6
    3
      1 2
@@ -839,7 +839,7 @@ END
      13
 END
 
-  ok $t->find(13); $t = $t->delete(13);   ok !$t->find(13); ok T($t, <<END);
+  ok $t->find(13); $t = $t->delete(13);  ok !$t->find(13); ok T($t, <<END);
  6
    3
      1 2
@@ -850,7 +850,7 @@ END
      12
 END
 
-  ok $t->find(12); $t = $t->delete(12);   ok !$t->find(12); ok T($t, <<END);
+  ok $t->find(12); $t = $t->delete(12);  ok !$t->find(12); ok T($t, <<END);
  6
    3
      1 2
@@ -860,7 +860,7 @@ END
      10 11
 END
 
-  ok $t->find(11); $t = $t->delete(11);   ok !$t->find(11); ok T($t, <<END);
+  ok $t->find(11); $t = $t->delete(11);  ok !$t->find(11); ok T($t, <<END);
  6
    3
      1 2
@@ -870,7 +870,7 @@ END
      10
 END
 
-  ok $t->find(10); $t = $t->delete(10);   ok !$t->find(10); ok T($t, <<END);
+  ok $t->find(10); $t = $t->delete(10);  ok !$t->find(10); ok T($t, <<END);
  3 6 8
    1 2
    4 5
@@ -878,40 +878,40 @@ END
    9
 END
 
-  ok $t->find(9); $t = $t->delete(9);  ok !$t->find(9); ok T($t, <<END);
+  ok $t->find(9);  $t = $t->delete(9);   ok !$t->find(9);  ok T($t, <<END);
  3 6
    1 2
    4 5
    7 8
 END
 
-  ok $t->find(8); $t = $t->delete(8);  ok !$t->find(8); ok T($t, <<END);
+  ok $t->find(8);  $t = $t->delete(8);   ok !$t->find(8);  ok T($t, <<END);
  3 6
    1 2
    4 5
    7
 END
 
-  ok $t->find(7); $t = $t->delete(7);  ok !$t->find(7); ok T($t, <<END);
+  ok $t->find(7);  $t = $t->delete(7);   ok !$t->find(7);  ok T($t, <<END);
  3 5
    1 2
    4
    6
 END
 
-  ok $t->find(6); $t = $t->delete(6);   ok !$t->find(6); ok T($t, <<END);
+  ok $t->find(6);  $t = $t->delete(6);   ok !$t->find(6);  ok T($t, <<END);
  3
    1 2
    4 5
 END
 
-  ok $t->find(5); $t = $t->delete(5);   ok !$t->find(5); ok T($t, <<END);
+  ok $t->find(5);  $t = $t->delete(5);   ok !$t->find(5);  ok T($t, <<END);
  3
    1 2
    4
 END
 
-  ok $t->find(4); $t = $t->delete(4);   ok !$t->find(4); ok T($t, <<END);
+  ok $t->find(4);  $t = $t->delete(4);   ok !$t->find(4);  ok T($t, <<END);
  2
    1
    3
@@ -925,7 +925,7 @@ END
  1 2
 END
 
-  ok $t->find(2); $t = $t->delete(2);   ok !$t->find(2); ok T($t, <<END);
+  ok $t->find(2);  $t = $t->delete(2);   ok !$t->find(2);  ok T($t, <<END);
  1
 END
 
