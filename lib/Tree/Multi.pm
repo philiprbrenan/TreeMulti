@@ -573,9 +573,13 @@ sub deleteElement($$)                                                           
    }
   else                                                                          # Delete from a node
    {my $r = $tree->node->[$i+1]->rightMostNode;                                 # Find previous node
+say STDERR "XXXX" if $debug;
+    my $k = $r->keys->[0];
+    my $d = $r->data->[0];
     $r->deleteElement(0);                                                       # Remove leaf
-           splice $tree->keys->@*, $i, 1, $r->keys->[0];                        # Transfer key
-    return splice $tree->data->@*, $i, 1, $r->data->[0];                        # Transfer data
+    splice $tree->keys->@*, $i, 1, $k;
+    splice $tree->data->@*, $i, 1, $d;
+    return $d;
    }
  }
 
@@ -781,12 +785,14 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
-if ($^O =~ m(bsd|linux)i) {plan tests => 21}                                    # Supported systems
+if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
+ {plan tests => 28;
+ }
 else
  {plan skip_all =>qq(Not supported on: $^O);
  }
 
-bail_on_fail;
+bail_on_fail;                                                                   # Stop if any tests fails
 
 sub T($$)                                                                       #P Write a result to the log file
  {my ($tree, $expected) = @_;                                                   # Tree
@@ -1040,6 +1046,71 @@ END
   $t = $t->delete(1);
 
   ok T($t, <<END);
+END
+ }
+
+if (1) {
+  local $keysPerNode = 3;
+
+  my $t = new; my $N = 5;
+
+  $t = insert($t, $_, 2 * $_) for 1..$N;
+
+  ok T($t, <<END);
+ 3
+   1 2
+   4 5
+END
+
+  $t = $t->delete(4);  ok T($t, <<END);
+ 3
+   1 2
+   5
+END
+
+  $t = $t->delete(1);  ok T($t, <<END);
+ 3
+   2
+   5
+END
+
+  $t = $t->delete(2);  ok T($t, <<END);
+ 3 5
+END
+
+  $t = $t->delete(3);  ok T($t, <<END);
+ 5
+END
+ }
+
+if (1) {
+  local $keysPerNode = 3;
+
+  my $t = new; my $N = 15;
+
+  $t = insert($t, $_, 2 * $_) for 1..$N;
+
+  ok T($t, <<END);
+ 6
+   3
+     1 2
+     4 5
+   9 12
+     7 8
+     10 11
+     13 14 15
+END
+
+  $debug = 1;
+  $t = $t->delete(3);  ok T($t, <<END);
+ 9
+   4 6
+     1 2
+     5
+     7 8
+   12
+     10 11
+     13 14 15
 END
  }
 
