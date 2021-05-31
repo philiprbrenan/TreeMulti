@@ -369,102 +369,168 @@ sub mergeablePairOfChildrenOnDelete($$)                                         
     maximumNumberOfKeys;
  }
 
-sub fillLeafFromLeftOrRight($$)                                                 #P Fill a leaf from the leaf
- {my ($n, $dir) = @_;                                                           # Node to fill, 0 from left or 1 from right
+sub fillFromLeftOrRight($$)                                                     #P Fill a  node from the specified sibling
+ {my ($n, $dir) = @_;                                                           # Node to fill, node to fill from 0 for left or 1 for right
   @_ == 2 or confess;
 
-  confess unless    $n->leaf;                                                   # Confirm we are on a leaf
   confess unless    $n->halfNode;                                               # Confirm leaf is half full
   confess unless my $p = $n->up;                                                # Parent of leaf
   my $i = $n->indexInParent;                                                    # Index of leaf in parent
 
   if ($dir)                                                                     # Fill from right
    {$i < $p->node->@* - 1 or confess;                                           # Cannot fill from right
-    my $f = $p->node->[$i+1];                                                   # Leaf on right
-    push $n->keys->@*, $p->keys->[$i]; $p->keys->[$i] = shift $f->keys->@*;     # Transfer key
-    push $n->data->@*, $p->data->[$i]; $p->data->[$i] = shift $f->data->@*;     # Transfer data
+    my $r = $p->node->[$i+1];                                                   # Leaf on right
+    push $n->keys->@*, $p->keys->[$i]; $p->keys->[$i] = shift $r->keys->@*;     # Transfer key
+    push $n->data->@*, $p->data->[$i]; $p->data->[$i] = shift $r->data->@*;     # Transfer data
+    if (!$n->leaf)                                                              # Transfer node if not a leaf
+     {push $n->node->@*, shift $r->node->@*;
+      $n->node->[-1]->up = $n;
+     }
    }
   else                                                                          # Fill from left
    {$i > 0 or confess;                                                          # Cannot fill from left
-    my $f = $p->node->[$i-1];                                                   # Leaf on leaf
-    unshift $n->keys->@*, $p->keys->[$i-1];$p->keys->[$i-1] = pop $f->keys->@*; # Transfer key
-    unshift $n->data->@*, $p->data->[$i-1];$p->data->[$i-1] = pop $f->data->@*; # Transfer data
+    my $l = $p->node->[$i-1];                                                   # Leaf on leaf
+    unshift $n->keys->@*, $p->keys->[$i-1];$p->keys->[$i-1] = pop $l->keys->@*; # Transfer key
+    unshift $n->data->@*, $p->data->[$i-1];$p->data->[$i-1] = pop $l->data->@*; # Transfer data
+    if (!$n->leaf)                                                              # Transfer node if not a leaf
+     {unshift $n->node->@*, pop $l->node->@*;
+      $n->node->[0]->up = $n;
+     }
    }
  }
 
-sub fillLeafFromLeft($)                                                         #P Fill a leaf from the left
+sub fillFromLeft($)                                                             #P Fill a node from the left
  {my ($n) = @_;                                                                 # Node to fill
-  fillLeafFromLeftOrRight($n, 0)
+  fillFromLeftOrRight($n, 0)
  }
 
-sub fillLeafFromRight($)                                                        #P Fill a leaf from the right
- {my ($n) = @_;                                                                 # Node to fill
-  fillLeafFromLeftOrRight($n, 1)
+sub fillFromRight($)                                                            #P Fill a node from the right
+ {my ($n) = @_;                                                                 # Leaf to fill
+  fillFromLeftOrRight($n, 1)
  }
 
-sub deleteElement($$)                                                           #P Delete an element
- {my ($tree, $i) = @_;                                                          # Tree, index to delete at
+sub mergeWithLeftOrRight($$)                                                    #P Merge two adjacent nodes
+ {my ($n, $dir) = @_;                                                           # Node to merge into, node to merge is on right if 1 else left
   @_ == 2 or confess;
 
-  if ($tree->leaf)                                                              # Delete from a leaf
-   {        splice $tree->keys->@*, $i, 1;                                      # Remove key
-    my $d = splice $tree->data->@*, $i, 1;                                      # Remove data
+  confess unless    $n->halfNode;                                               # Confirm leaf is half full
+  confess unless my $p = $n->up;                                                # Parent of leaf
+  confess if        $p->halfNode;                                               # Parent must have more than he minimum number of keys because we need to remove one
+  my $i = $n->indexInParent;                                                    # Index of leaf in parent
 
-    if    ($tree->keys->@* > minimumNumberOfKeys) {}                            # No need to merge
-    elsif (my @i = mergeableWithPrevOrNextOnDelete($tree))                      # Mergeable with neighboring leaf
-     {mergeNeigboringLeaves($tree, @i);
-     }
-    else                                                                        # Either neighboring leaf can spare a key so rotate a key from the previous element through parent
-     {my $p = $tree->indexInParent;
-      my $P = $tree->up;
-      if ($p > 0)                                                               # Rotate a key from the previous leaf
-       {unshift $tree->keys->@*, $P->keys->[$p]; $P->keys->[$p] = pop $P->node->[$p-1]->keys->@*;
-        unshift $tree->data->@*, $P->data->[$p]; $P->data->[$p] = pop $P->node->[$p-1]->data->@*;
-       }
-      else                                                                      # Rotate a key from the next leaf
-       {push $tree->keys->@*, $P->keys->[$p]; $P->keys->[$p] = shift $P->node->[$p+1]->keys->@*;
-        push $tree->data->@*, $P->data->[$p]; $P->data->[$p] = shift $P->node->[$p+1]->data->@*;
-       }
-     }
-    return $d;                                                                  # Return data from deleted element
+  if ($dir)                                                                     # Fill from right
+   {$i < $p->node->@* - 1 or confess;                                           # Cannot fill from right
+    my $r = $p->node->[$i+1];                                                   # Leaf on right
+    confess unless $r->halfNode;                                                # Confirm right leaf is half full
+    push $n->keys->@*, $p->keys->[$i], $r->keys->@*; splice $p->keys->@*, $i, 1;# Transfer keys
+    push $n->data->@*, $p->data->[$i], $r->data->@*; splice $p->data->@*, $i, 1;# Transfer data
+    push $n->node->@*, $r->node->@* if !$n->leaf;                               # Children of merged node
+    $_->up  = $n for $r->node->@*;                                              # Update parent of children of right node
+    splice $p->node->@*, $i+1, 1;                                               # Remove link from parent to right child
    }
-=pod
-
-  elsif ($tree->mergeablePairOfChildrenOnDelete($i))                            # Delete from a non leaf by merging
-   {        splice $tree->keys->@*, $i,  1;                                     # Remove key
-    my $d = splice $tree->data->@*, $i,  1;                                     # Remove data
-    my $r = splice $tree->node->@*, $i + 1, 1;                                  # Right node that we are going to merge into the left node
-
-    my $l = $tree->node->[$i];
-
-    push $l->keys->@*, $r->keys->@*;
-    push $l->data->@*, $r->data->@*;
-    push $l->data->@*, $r->data->@*;
-
-     if deleteElementNoCheck ($tree, $i);
-mergeablePairOfChildrenOnDelete
-    if    ($tree->keys->@* > $keysPerNode / 2) {}                               # No need to merge
-    elsif (my @i = mergeableWithPrevOrNextOnDelete($tree))                      # Mergeable with neighboring leaf
-     {mergeNeigboringLeaves($tree, @i);
-     }
-    else                                                                        # Either neighboring leaf can spare a key so rotate a key from the previous element through parent
-     {my $p = $tree->indexInParent;
-      my $P = $tree->up;
-      if ($p > 0)                                                               # Rotate a key from the previous leaf
-       {unshift $tree->keys->@*, $P->keys->[$p]; $P->keys->[$p] = pop $P->node->[$p-1]->keys->@*;
-        unshift $tree->data->@*, $P->data->[$p]; $P->data->[$p] = pop $P->node->[$p-1]->data->@*;
-       }
-      else                                                                      # Rotate a key from the next leaf
-       {push $tree->keys->@*, $P->keys->[$p]; $P->keys->[$p] = shift $P->node->[$p+1]->keys->@*;
-        push $tree->data->@*, $P->data->[$p]; $P->data->[$p] = shift $P->node->[$p+1]->data->@*;
-       }
-     }
+  else                                                                          # Fill from left
+   {$i > 0 or confess;                                                          # Cannot fill from left
+    my $l = $p->node->[$i-1];                                                   # Leaf on left
+    confess unless $l->halfNode;                                                # Confirm right leaf is half full
+    unshift $n->keys->@*, $l->keys->@*, $p->keys->[$i]; splice $p->keys->@*, $i, 1;# Transfer keys
+    unshift $n->data->@*, $l->data->@*, $p->data->[$i]; splice $p->data->@*, $i, 1;# Transfer data
+    unshift $n->node->@*, $l->node->@* if !$n->leaf;                            # Children of merged node
+    $_->up  = $n for $l->node->@*;                                              # Update parent of children of left node
+    splice $p->node->@*, $i-1, 1;                                               # Remove link from parent to left child
    }
-=cut
-  1
  }
 
-sub delete($$)                                                                  # Find a key in a tree returning its associated data or undef if the key does not exist
+sub mergeWithLeft($)                                                            #P Merge a node from the left
+ {my ($n) = @_;                                                                 # Node to merge into
+  mergeWithLeftOrRight($n, 0)
+ }
+
+sub mergeWithRight($)                                                           #P Merge a node from the right
+ {my ($n) = @_;                                                                 # Node to merge into
+  mergeWithLeftOrRight($n, 1)
+ }
+
+sub mergeOrFill($)                                                              #P make a node larger than a half node
+ {my ($tree) = @_;                                                              # Tree
+  @_ == 1 or confess;
+  my $i = $tree->indexInParent;
+  $i > 0 or confess;                                                            # So we can find the left node
+  my $p = $tree->up;                                                            # Parent
+
+  return unless if $tree->halfNode;                                             # No need if not a half node
+  $p->mergeOrFill;                                                              # Ensure parent is not a half node
+say STDERR "Delete node: $i ", join " ", $tree->keys->@*;
+
+  if ($i > 0)                                                                   # Merge with left node
+   {my $l = $p->node->[$i-1];                                                   # Left node
+    my $r = $tree;                                                              # Right node
+    if ($r->halfNode)
+     {if ($l->halfNode)                                                         # Left and right must be half nodes, the parent yields  a key so it must be more than half full
+       {$r->mergeFromLeft;
+       }
+      else                                                                      # Left and right must be half nodes, the parent yields  a key so it must be more than half full
+       {$r->fillFromLeft;
+       }
+     }
+    else {}                                                                     # No action required as the node is more than half full
+   }
+  else                                                                          # Merge with right node
+   {my $r = $p->node->[$i+1];                                                   # Left node
+    my $l = $tree;                                                              # Right node
+    if ($l->halfNode)
+     {if (r->halfNode)                                                          # Left and right must be half nodes, the parent yields  a key so it must be more than half full
+       {$l->mergeFromRight;
+       }
+      else                                                                      # Left and right must be half nodes, the parent yields  a key so it must be more than half full
+       {$l->fillFromRight;
+       }
+     }
+    else {}                                                                     # No action required as the node is more than half full
+   }
+  return;
+ }
+
+sub leftMostNode($)                                                             # Return the left most node below the specified one
+ {my ($tree) = @_;                                                              # Tree
+  return $tree if $tree->leaf;                                                  # We are on a leaf so we have arrived at the left most node
+  $tree->node->[0]->leftMostNode;                                               # Go left
+ }
+
+sub rightMostNode($)                                                            # Return the right most node below the specified one
+ {my ($tree) = @_;                                                              # Tree
+  return $tree if $tree->leaf;                                                  # We are on a leaf so we have arrived at the left most node
+  $tree->node->[-1]->rightMostNode;                                             # Go right
+ }
+
+sub deleteElementDirectly($$)                                                   #P Delete the indicated element directly and return its data
+ {my ($tree, $i) = @_;                                                          # Tree, index to delete at
+  @_ == 2 or confess;
+  splice        $tree->keys->@*, $i, 1;                                         # Remove keys
+  return splice $tree->data->@*, $i, 1;                                         # Remove data and return it
+ }
+
+sub deleteElement($$)                                                           #P Delete an element in a node
+ {my ($tree, $i) = @_;                                                          # Tree, index to delete at
+  @_ == 2 or confess;
+  $tree->mergeOrFill;
+  if ($tree->leaf)                                                              # Delete from a leaf
+   {return $tree->deleteElementDirectly($i);
+   }
+  elsif ($i > 0)                                                                # Delete from a node
+   {my $r = $tree->node->[$i-1]->leftMostNode;                                  # Find previous node
+    $r->deleteElement(scalar $r->keys->@*);                                     # Remove leaf
+           splice $tree->keys->@*, $i, 1, $r->keys->[-1];                       # Transfer key
+    return splice $tree->data->@*, $i, 1, $r->data->[-1];                       # Transfer data
+   }
+  else                                                                          # Delete from a node
+   {my $r = $tree->node->[$i+1]->rightMostNode;                                 # Find previous node
+    $tree->deleteElement(0);                                                    # Remove leaf
+           splice $tree->keys->@*, $i, 1, $r->keys->[0];                        # Transfer key
+    return splice $tree->data->@*, $i, 1, $r->data->[0];                        # Transfer data
+   }
+ }
+
+sub delete($$)                                                                  # Find a key in a tree, delete it, return its associated data or undef if the key does not exist
  {my ($tree, $key) = @_;                                                        # Tree, key
   @_ == 2 or confess;
   my @k = $tree->keys->@*;
@@ -784,20 +850,8 @@ if (1) {                                                                        
      16
 END
 
-  $t->findNode(16)->fillLeafFromLeft;
-  is_deeply $t->printKeys, <<END;
- 6
-   3
-     1 2
-     4 5
-   9 12 14
-     7 8
-     10 11
-     13
-     15 16
-END
-
-  $t->findNode(13)->fillLeafFromRight;
+  $t->delete(16);
+  say STDERR $t->printKeys; exit;
   is_deeply $t->printKeys, <<END;
  6
    3
