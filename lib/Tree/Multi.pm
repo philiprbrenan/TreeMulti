@@ -544,6 +544,7 @@ sub insert($$$)                                                                 
     $node->keys = [@k[0..$index], $key,  @k[$index+1..$#k]];
     $node->data = [@d[0..$index], $data, @d[$index+1..$#d]];
    }
+
   root splitFullLeafNode $node
  }
 
@@ -568,6 +569,7 @@ sub printKeys($;$)                                                              
        }
      }
    };
+
   $print->($tree->root, 0);
 
   join "\n", @s, '';
