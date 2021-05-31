@@ -340,6 +340,7 @@ sub indexInParent($)                                                            
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
   my $p = $tree->up;
+  confess unless defined $p;
   my @n = $p->node->@*;
   for my $i(keys @n)
    {return $i if $n[$i] == $tree;
@@ -416,31 +417,29 @@ sub mergeWithLeftOrRight($$)                                                    
 
   confess unless    $n->halfNode;                                               # Confirm leaf is half full
   confess unless my $p = $n->up;                                                # Parent of leaf
-  confess if        $p->halfNode;                                               # Parent must have more than he minimum number of keys because we need to remove one
+  confess if        $p->halfNode and $p->up;                                    # Parent must have more than the minimum number of keys because we need to remove one unless it is the root of the tree
+
+say STDERR "BBBBB ", dump($p->keys);
   my $i = $n->indexInParent;                                                    # Index of leaf in parent
 
   if ($dir)                                                                     # Merge with right hand sibling
    {$i < $p->node->@* - 1 or confess;                                           # Cannot fill from right
     my $r = $p->node->[$i+1];                                                   # Leaf on right
     confess unless $r->halfNode;                                                # Confirm right leaf is half full
-    push $n->keys->@*, $p->keys->[$i], $r->keys->@*; splice $p->keys->@*, $i, 1;# Transfer keys
-    push $n->data->@*, $p->data->[$i], $r->data->@*; splice $p->data->@*, $i, 1;# Transfer data
+    push $n->keys->@*, splice($p->keys->@*, $i, 1), $r->keys->@*;               # Transfer keys
+    push $n->data->@*, splice($p->data->@*, $i, 1), $r->data->@*;               # Transfer data
     if (!$n->leaf)                                                              # Children of merged node
      {push $n->node->@*, $r->node->@*;                                          # Children of merged node
       $_->up  = $n for $r->node->@*;                                            # Update parent of children of right node
-      splice $p->node->@*, $i+1, 1;                                             # Remove link from parent to right child
      }
+    splice $p->node->@*, $i+1, 1;                                               # Remove link from parent to right child
    }
   else                                                                          # Merge with left hand sibling
    {$i > 0 or confess;                                                          # Cannot fill from left
     my $l = $p->node->[$i-1];                                                   # Node on left
     confess unless $l->halfNode;                                                # Confirm right leaf is half full
-say STDERR "AAA1 ", dump($l->keys) if $debug;
-say STDERR "AAA2 ", dump($n->keys) if $debug;
-say STDERR "AAA3 ", dump($p->keys) if $debug;
     unshift $n->keys->@*, $l->keys->@*, splice $p->keys->@*, $i-1, 1;           # Transfer keys
     unshift $n->data->@*, $l->data->@*, splice $p->data->@*, $i-1, 1;           # Transfer data
-say STDERR "AAA4 ", $p->printKeys if $debug;
     if (!$n->leaf)                                                              # Children of merged node
      {unshift $n->node->@*, $l->node->@*;                                       # Children of merged node
       $_->up  = $n for $l->node->@*;                                            # Update parent of children of left node
@@ -459,22 +458,57 @@ sub mergeWithRight($)                                                           
   mergeWithLeftOrRight($n, 1)
  }
 
+sub mergeRoot($)                                                                #P Merge the root node
+ {my ($tree) = @_;                                                              # Tree
+  @_ == 1 or confess;
+  confess if $tree->up;                                                         # Must be at the root
+
+  if ($tree->keys->@* == 1)
+   {if (!$tree->leaf)
+     {if ((my $l = $tree->node->[0])->halfNode)
+       {if ((my $r = $tree->node->[1])->halfNode)
+         {push $l->keys->@*, $tree->keys->@*,  $r->keys->@*;
+          push $l->data->@*, $tree->data->@*,  $r->data->@*;
+          say STDERR "LLLL ", dump $tree->node->[0]->keys;
+          say STDERR "RRRR ", dump $tree->node->[1]->keys;
+          push $l->node->@*, $r->node->@*;
+          $_->up = $l for $r->node->@*;
+          $l->up = undef;
+          return $l;
+         }
+       }
+     }
+   }
+  $tree
+ }
+
 sub mergeOrFill($)                                                              #P make a node larger than a half node
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
-  my $i = $tree->indexInParent;
-  my $p = $tree->up;                                                            # Parent
 
   return 0 unless $tree->halfNode;                                              # No need if not a half node
 
-  $p->mergeOrFill;                                                              # Ensure parent is not a half node
+  my $p = $tree->up;                                                            # Parent
+  if ($p->up)
+   {if ($p->halfNode)
+     {$p->mergeOrFill;                                                              # Ensure parent is not a half node
+     }
+   }
+  else
+   {say STDERR "oooo\n", $tree->root->printKeys if $debug;
+    $p = $p->mergeRoot;
+    say STDERR "pppp\n", $tree->root->printKeys if $debug;
+   }
 
+  my $i = $tree->indexInParent;
   if ($i > 0)                                                                   # Merge with left node
    {my $l = $p->node->[$i-1];                                                   # Left node
     my $r = $tree;                                                              # Right node
     if ($r->halfNode)
      {if ($l->halfNode)                                                         # Left and right must be half nodes, the parent yields  a key so it must be more than half full
-       {$r->mergeWithLeft;
+       {say STDERR "MMM111 ", dump($l->keys) if $debug;
+        say STDERR "MMM222 ", dump($r->keys) if $debug;
+        $r->mergeWithLeft;
         return 1 + minimumNumberOfKeys;                                         # The extent to which we have been shifted over
        }
       else                                                                      # Left and right must be half nodes, the parent yields  a key so it must be more than half full
@@ -488,7 +522,7 @@ sub mergeOrFill($)                                                              
    {my $r = $p->node->[$i+1];                                                   # Left node
     my $l = $tree;                                                              # Right node
     if ($l->halfNode)
-     {if (r->halfNode)                                                          # Left and right must be half nodes, the parent yields  a key so it must be more than half full
+     {if ($r->halfNode)                                                         # Left and right must be half nodes, the parent yields  a key so it must be more than half full
        {$l->mergeWithRight;
         return 0;
        }
@@ -517,9 +551,7 @@ sub rightMostNode($)                                                            
 sub deleteElement($$)                                                           #P Delete an element in a node
  {my ($tree, $i) = @_;                                                          # Tree, index to delete at
   @_ == 2 or confess;
-say STDERR "IIII ", dump($i) if $debug;
   $i += $tree->mergeOrFill;                                                     # Increase by one if from left
-say STDERR "JJJJ ", dump($i, $tree->keys) if $debug;
   if ($tree->leaf)                                                              # Delete from a leaf
    {       splice $tree->keys->@*, $i, 1;                                       # Remove keys
     return splice $tree->data->@*, $i, 1;                                       # Remove data and return it
@@ -532,13 +564,14 @@ say STDERR "JJJJ ", dump($i, $tree->keys) if $debug;
    }
   else                                                                          # Delete from a node
    {my $r = $tree->node->[$i+1]->rightMostNode;                                 # Find previous node
-    $tree->deleteElement(0);                                                    # Remove leaf
+    $r->deleteElement(0);                                                    # Remove leaf
+#   $tree->deleteElement(0);                                                    # Remove leaf
            splice $tree->keys->@*, $i, 1, $r->keys->[0];                        # Transfer key
     return splice $tree->data->@*, $i, 1, $r->data->[0];                        # Transfer data
    }
  }
 
-sub delete($$)                                                                  # Find a key in a tree, delete it, return its associated data or undef if the key does not exist
+sub delete($$)                                                                  # Find a key in a tree, delete it, return the new tree
  {my ($tree, $key) = @_;                                                        # Tree, key
   @_ == 2 or confess;
   my @k = $tree->keys->@*;
@@ -547,24 +580,27 @@ sub delete($$)                                                                  
    {if (my $node = $tree->node->[0])
      {return __SUB__->($node, $key);
      }
-    return undef;
+    return $tree->root;
    }
 
   if ($key > $k[-1])                                                            # Greater than largest key in node
    {if (my $node = $tree->node->[-1])
      {return __SUB__->($node, $key);
      }
-    return undef;
+    return $tree->root;
    }
 
   for my $i(keys @k)                                                            # Search the keys in this node
    {my $s = $key <=> $k[$i];                                                    # Compare key
-    return deleteElement($tree, $i) if $s == 0;                                 # Delete found key
+    if ($s == 0)                                                                # Delete found key
+     {deleteElement($tree, $i);                                                 # Delete
+      return $tree->root;                                                       # New tree
+     }
     if ($s < 0)                                                                 # Less than current key
      {if (my $node = $tree->node->[$i])
        {return __SUB__->($node, $key);
        }
-      return undef;
+      return $tree->root;
      }
    }
   confess 'Not possible';
@@ -616,7 +652,7 @@ sub printKeysAndData($)                                                         
      }
    };
 
-  $print->($t, 0);
+  $print->($t->root, 0);
 
   join "\n", @s;
  }
@@ -743,13 +779,13 @@ bail_on_fail;
 
 sub T($$)                                                                       #P Write a result to the log file
  {my ($tree, $expected) = @_;                                                   # Tree
+  confess unless ref($tree);
   my $got = $tree->printKeys;
   my $s = showGotVersusWanted($got, $expected);
   return !$s unless $develop and $s;
 
   owf($logFile, $got);
-  say STDERR $s;
-  exit;
+  confess;
  }
 
 my $start = time;                                                               # Tests
@@ -871,7 +907,7 @@ if (1) {                                                                        
      16
 END
 
-  $t->delete(16);  ok T($t, <<END);
+  $t = $t->delete(16);  ok T($t, <<END);
  6
    3
      1 2
@@ -883,7 +919,7 @@ END
      15
 END
 
-  $t->delete(15);  ok T($t, <<END);
+  $t = $t->delete(15);  ok T($t, <<END);
  6
    3
      1 2
@@ -894,7 +930,7 @@ END
      13 14
 END
 
-  $t->delete(14);  ok T($t, <<END);
+  $t = $t->delete(14);  ok T($t, <<END);
  6
    3
      1 2
@@ -905,7 +941,7 @@ END
      13
 END
 
-  $t->delete(13);  ok T($t, <<END);
+  $t = $t->delete(13);  ok T($t, <<END);
  6
    3
      1 2
@@ -916,7 +952,7 @@ END
      12
 END
 
-  $t->delete(12);  ok T($t, <<END);
+  $t = $t->delete(12);  ok T($t, <<END);
  6
    3
      1 2
@@ -926,7 +962,7 @@ END
      10 11
 END
 
-  $t->delete(11);  ok T($t, <<END);
+  $t = $t->delete(11);  ok T($t, <<END);
  6
    3
      1 2
@@ -934,6 +970,32 @@ END
    9
      7 8
      10
+END
+
+  $debug = 1;
+say STDERR "AAAA\n", $t->printKeys;
+  $t = $t->delete(10);
+say STDERR "BBBB ", $t->printKeys;
+exit;
+  ok T($t, <<END);
+ 3 6 8
+   1 2
+   4 5
+   7
+   9
+END
+
+  $debug = 1;
+say STDERR "AAAA\n", $t->printKeys;
+  $t = $t->delete(9);
+say STDERR "BBBB ", $t->printKeys;
+
+  ok T($t, <<END);
+ 3 6 8
+   1 2
+   4 5
+   7
+   9
 END
  }
 
