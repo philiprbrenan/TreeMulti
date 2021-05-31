@@ -129,7 +129,7 @@ sub splitNode($)                                                                
   @_ == 1 or confess;
 
   confess unless my $p = $node->up;                                             # Check parent
-  confess unless $node->node->@* == maximumNumberOfNodes;                           # Check size
+  confess unless $node->node->@* == maximumNumberOfNodes;                       # Check size
 
   my ($kl, $k, $kr) = separateKeys $node;
   my ($dl, $d, $dr) = separateData $node;
@@ -157,7 +157,7 @@ sub splitRootNode($)                                                            
   @_ == 1 or confess;
 
   confess if $node->up;                                                         # Check parent
-  confess unless $node->node->@* == maximumNumberOfNodes;                           # Check size
+  confess unless $node->node->@* == maximumNumberOfNodes;                       # Check size
 
   my ($kl, $k, $kr) = separateKeys $node;
   my ($dl, $d, $dr) = separateData $node;
@@ -178,7 +178,7 @@ sub splitRootNode($)                                                            
 sub splitFullNode($)                                                            #P Split a full node and return the new parent or return the existing node if it does not need to be split
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
-  return $node unless $node->node->@* == maximumNumberOfNodes;                      # Check size
+  return $node unless $node->node->@* == maximumNumberOfNodes;                  # Check size
   return splitNode     $node if $node->up;                                      # Node has a parent
   return splitRootNode $node                                                    # Root node
  }
@@ -188,7 +188,7 @@ sub splitLeafNode($)                                                            
   @_ == 1 or confess;
 
   confess unless my $p = $node->up;                                             # Check parent
-  confess unless $node->keys->@* == maximumNumberOfNodes;                           # Check size
+  confess unless $node->keys->@* == maximumNumberOfNodes;                       # Check size
 
   my ($kl, $k, $kr) = separateKeys $node;
   my ($dl, $d, $dr) = separateData $node;
@@ -215,7 +215,7 @@ sub splitRootLeafNode($)                                                        
   @_ == 1 or confess;
 
   confess if $node->up;                                                         # Check parent
-  confess unless $node->keys->@* == maximumNumberOfNodes;                           # Check size
+  confess unless $node->keys->@* == maximumNumberOfNodes;                       # Check size
 
   my ($kl, $k, $kr) = separateKeys $node;
   my ($dl, $d, $dr) = separateData $node;
@@ -289,7 +289,7 @@ sub find($$)                                                                    
     return undef;
    }
 
-  if ($key > $k[-1])                                                           # Greater than largest key in node
+  if ($key > $k[-1])                                                            # Greater than largest key in node
    {if (my $node = $tree->node->[-1])
      {return __SUB__->($node, $key);
      }
@@ -321,7 +321,7 @@ sub findNode($$)                                                                
     return undef;
    }
 
-  if ($key > $k[-1])                                                           # Greater than largest key in node
+  if ($key > $k[-1])                                                            # Greater than largest key in node
    {if (my $node = $tree->node->[-1])
      {return __SUB__->($node, $key);
      }
