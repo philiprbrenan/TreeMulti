@@ -299,38 +299,6 @@ sub find($$)                                                                    
   confess 'Not possible';
  } # find
 
-sub findNode($$)                                                                # Find the node containing a key.
- {my ($tree, $key) = @_;                                                        # Tree, key
-  @_ == 2 or confess;
-  my @k = $tree->keys->@*;
-
-  if ($key < $k[0])                                                             # Less than smallest key in node
-   {if (my $node = $tree->node->[0])
-     {return __SUB__->($node, $key);
-     }
-    return undef;
-   }
-
-  if ($key > $k[-1])                                                            # Greater than largest key in node
-   {if (my $node = $tree->node->[-1])
-     {return __SUB__->($node, $key);
-     }
-    return undef;
-   }
-
-  for my $i(keys @k)                                                            # Search the keys in this node
-   {my $s = $key <=> $k[$i];                                                    # Compare key
-    return $tree if $s == 0;                                                    # Found key so return node
-    if ($s < 0)                                                                 # Less than current key
-     {if (my $node = $tree->node->[$i])
-       {return __SUB__->($node, $key);
-       }
-      return undef;
-     }
-   }
-  confess 'Not possible';
- } # find
-
 sub indexInParent($)                                                            #P Get the index of a node in its parent
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
