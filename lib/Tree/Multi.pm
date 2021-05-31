@@ -107,7 +107,7 @@ sub separateNode($)                                                             
 
 sub reUp($@)                                                                    #P Reconnect the children to their new parent
  {my ($node, @children) = @_;                                                   # Node, children
-  @_ > 1 or confess;
+  @_ > 0 or confess;
 
   for my $c(@children)                                                          # Add new child to parent known to be not full
    {$c->up = $node;
@@ -390,7 +390,7 @@ sub mergeRoot($$)                                                               
   $tree->data = $child->data = [$l->data->@*, $tree->data->@*, $r->data->@*];
   $tree->node = $child->node = [$l->node->@*,                  $r->node->@*];
 
-  $_->up = $tree for $tree->node->@*;
+  reUp($tree, $tree->node->@*);
  }
 
 sub mergeOrFill($)                                                              #P make a node larger than a half node
