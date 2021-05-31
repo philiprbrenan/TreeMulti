@@ -280,6 +280,8 @@ sub find($$)                                                                    
   @_ == 2 or confess;
   my @k = $tree->keys->@*;
 
+  return undef if @k == 0;                                                      # Empty
+
   if ($key < $k[0])                                                             # Less than smallest key in node
    {if (my $node = $tree->node->[0])
      {return __SUB__->($node, $key);
@@ -566,22 +568,23 @@ sub deleteElement($$)                                                           
     return splice $tree->data->@*, $i, 1;                                       # Remove data and return it
    }
   elsif ($i > 0)                                                                # Delete from a node
-   {my $l = $tree->node->[$i-1]->rightMostNode;                                 # Find previous node
+   {my $l = $tree->node->[$i]->rightMostNode;                                 # Find previous node
     my $k = $l->keys->[-1];
     my $d = $l->data->[-1];
-    $l->deleteElement(-1 + scalar $l->keys->@*);                                # Remove leaf
     splice $tree->keys->@*, $i, 1, $k;
     splice $tree->data->@*, $i, 1, $d;
-say STDERR "YYYY" if $debug;
+    $l->deleteElement(-1 + scalar $l->keys->@*);                                # Remove leaf
+say STDERR "YYYY k=$k" if $debug;
     return $d;
    }
   else                                                                          # Delete from a node
    {my $r = $tree->node->[$i+1]->leftMostNode;                                 # Find previous node
     my $k = $r->keys->[0];
     my $d = $r->data->[0];
-    $r->deleteElement(0);                                                       # Remove leaf
     splice $tree->keys->@*, $i, 1, $k;
     splice $tree->data->@*, $i, 1, $d;
+    $r->deleteElement(0);                                                       # Remove leaf
+say STDERR "ZZZZ k=$k" if $debug;
     return $d;
    }
  }
@@ -789,7 +792,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 28;
+ {plan tests => 74;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -926,7 +929,7 @@ if (1) {                                                                        
      16
 END
 
-  $t = $t->delete(16);  ok T($t, <<END);
+  ok $t->find(16); $t = $t->delete(16);   ok !$t->find(16); ok T($t, <<END);
  6
    3
      1 2
@@ -938,7 +941,7 @@ END
      15
 END
 
-  $t = $t->delete(15);  ok T($t, <<END);
+  ok $t->find(15); $t = $t->delete(15);   ok !$t->find(15); ok T($t, <<END);
  6
    3
      1 2
@@ -949,7 +952,7 @@ END
      13 14
 END
 
-  $t = $t->delete(14);  ok T($t, <<END);
+  ok $t->find(14); $t = $t->delete(14);   ok !$t->find(14); ok T($t, <<END);
  6
    3
      1 2
@@ -960,7 +963,7 @@ END
      13
 END
 
-  $t = $t->delete(13);  ok T($t, <<END);
+  ok $t->find(13); $t = $t->delete(13);   ok !$t->find(13); ok T($t, <<END);
  6
    3
      1 2
@@ -971,7 +974,7 @@ END
      12
 END
 
-  $t = $t->delete(12);  ok T($t, <<END);
+  ok $t->find(12); $t = $t->delete(12);   ok !$t->find(12); ok T($t, <<END);
  6
    3
      1 2
@@ -981,7 +984,7 @@ END
      10 11
 END
 
-  $t = $t->delete(11);  ok T($t, <<END);
+  ok $t->find(11); $t = $t->delete(11);   ok !$t->find(11); ok T($t, <<END);
  6
    3
      1 2
@@ -991,7 +994,7 @@ END
      10
 END
 
-  $t = $t->delete(10);  ok T($t, <<END);
+  ok $t->find(10); $t = $t->delete(10);   ok !$t->find(10); ok T($t, <<END);
  3 6 8
    1 2
    4 5
@@ -999,56 +1002,54 @@ END
    9
 END
 
-  $t = $t->delete(9); ok T($t, <<END);
+  ok $t->find(9); $t = $t->delete(9);  ok !$t->find(9); ok T($t, <<END);
  3 6
    1 2
    4 5
    7 8
 END
 
-  $t = $t->delete(8); ok T($t, <<END);
+  ok $t->find(8); $t = $t->delete(8);  ok !$t->find(8); ok T($t, <<END);
  3 6
    1 2
    4 5
    7
 END
 
-  $t = $t->delete(7); ok T($t, <<END);
+  ok $t->find(7); $t = $t->delete(7);  ok !$t->find(7); ok T($t, <<END);
  3 5
    1 2
    4
    6
 END
 
-  $t = $t->delete(6);  ok T($t, <<END);
+  ok $t->find(6); $t = $t->delete(6);   ok !$t->find(6); ok T($t, <<END);
  3
    1 2
    4 5
 END
 
-  $t = $t->delete(5);  ok T($t, <<END);
+  ok $t->find(5); $t = $t->delete(5);   ok !$t->find(5); ok T($t, <<END);
  3
    1 2
    4
 END
 
-  $t = $t->delete(4);  ok T($t, <<END);
+  ok $t->find(4); $t = $t->delete(4);   ok !$t->find(4); ok T($t, <<END);
  2
    1
    3
 END
 
-  $t = $t->delete(3);  ok T($t, <<END);
+  ok $t->find(3); $t = $t->delete(3);   ok !$t->find(3); ok T($t, <<END);
  1 2
 END
 
-  $t = $t->delete(2);  ok T($t, <<END);
+  ok $t->find(2); $t = $t->delete(2);   ok !$t->find(2); ok T($t, <<END);
  1
 END
 
-  $t = $t->delete(1);
-
-  ok T($t, <<END);
+  ok $t->find(1);  $t = $t->delete(1);   ok !$t->find(1);  ok T($t, <<END);
 END
  }
 
@@ -1104,7 +1105,7 @@ if (1) {
      13 14 15
 END
 
-  $t = $t->delete(3);  ok T($t, <<END);
+  ok $t->find(3); $t = $t->delete(3);  ok !$t->find(3); ok T($t, <<END);
  9
    4 6
      1 2
@@ -1114,16 +1115,48 @@ END
      10 11
      13 14 15
 END
-exit;
-  $debug = 1;
-  $t = $t->delete(12);  ok T($t, <<END);
+
+  ok $t->find(12); $t = $t->delete(12);   ok !$t->find(12); ok T($t, <<END);
  6
    4
      1 2
      5
-   9 7
+   9 11
+     7 8
+     10
+     13 14 15
+END
+
+  ok $t->find(4); $t = $t->delete(4);   ok !$t->find(4); ok T($t, <<END);
+ 9
+   2 6
+     1
+     5
+     7 8
+   11
+     10
+     13 14 15
+END
+
+  ok $t->find(11); $t = $t->delete(11);   ok !$t->find(11); ok T($t, <<END);
+ 6
+   2
+     1
+     5
+   8 10
      7
-     10 11
+     9
+     13 14 15
+END
+
+  $debug = 1;
+  ok $t->find(2); $t = $t->delete(2);   ok !$t->find(2); ok T($t, <<END);
+ 8
+   6
+     1 5
+     7
+   10
+     9
      13 14 15
 END
  }
