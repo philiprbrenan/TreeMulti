@@ -18,9 +18,12 @@ our $keysPerNode = 3;                                                           
 
 #D1 Multi-way Tree                                                              # Create and use a multi-way tree.
 
+my $nodes = 0;
+
 sub new()                                                                       #P Create a new multi-way tree node
  {my () = @_;                                                                   # Key, $data, parent node, index of link from parent node
   genHash(__PACKAGE__,                                                          # Multi tree node
+    number=> ++$nodes,                                                          # Number of the node for debugging purposes
     up    => undef,                                                             # Parent node
     keys  => [],                                                                # Array of key items for this node
     data  => [],                                                                # Data corresponding to each key
@@ -486,7 +489,7 @@ sub mergeRoot($$)                                                               
        }
      }
    }
-  $tree
+  return undef;
  }
 
 sub mergeOrFill($)                                                              #P make a node larger than a half node
@@ -496,25 +499,19 @@ sub mergeOrFill($)                                                              
   return 0 unless $tree->halfNode;                                              # No need if not a half node
 
   my $p = $tree->up;                                                            # Parent
-  if ($p->up)
+  if ($p and $p->up)
    {if ($p->halfNode)
      {$p->mergeOrFill;                                                          # Ensure parent is not a half node
      }
    }
-  else
-   {
-
-say STDERR "EEEEE000\n", $tree->printKeys if $debug;
-     $p = $p->mergeRoot($tree);
-say STDERR "EEEEE111\n", $tree->printKeys if $debug;
-#   return 0;
+  elsif ($p and $p->keys->@* == 1)
+   {my $i = $tree->indexInParent;
+     my $q = $p->mergeRoot($tree);
+     if ($q) {$p = $q; return $i ? 2 : 0}
    }
+  elsif (!$p) {return 0;}
 
-say STDERR "FF11\n", $tree->printKeys if $debug;
-say STDERR "FF22\n", dump($tree->keys) if $debug;
-say STDERR "FF33\n", dump($tree->root) if $debug;
   my $i = $tree->indexInParent;
-say STDERR "GGGG\n", $tree->printKeys if $debug;
   if ($i > 0)                                                                   # Merge with left node
    {my $l = $p->node->[$i-1];                                                   # Left node
     my $r = $tree;                                                              # Right node
@@ -563,11 +560,7 @@ sub rightMostNode($)                                                            
 sub deleteElement($$)                                                           #P Delete an element in a node
  {my ($tree, $i) = @_;                                                          # Tree, index to delete at
   @_ == 2 or confess;
-say STDERR "CC11\n", dump($tree->root) if $debug;
-say STDERR "CC22\n", $tree->printKeys  if $debug;
   $i += $tree->mergeOrFill;                                                     # Increase by one if from left
-say STDERR "DD11\n", dump($tree->root) if $debug;
-say STDERR "dd22\n", $tree->printKeys  if $debug;
   if ($tree->leaf)                                                              # Delete from a leaf
    {       splice $tree->keys->@*, $i, 1;                                       # Remove keys
     return splice $tree->data->@*, $i, 1;                                       # Remove data and return it
@@ -581,7 +574,6 @@ say STDERR "dd22\n", $tree->printKeys  if $debug;
   else                                                                          # Delete from a node
    {my $r = $tree->node->[$i+1]->rightMostNode;                                 # Find previous node
     $r->deleteElement(0);                                                       # Remove leaf
-#   $tree->deleteElement(0);                                                    # Remove leaf
            splice $tree->keys->@*, $i, 1, $r->keys->[0];                        # Transfer key
     return splice $tree->data->@*, $i, 1, $r->data->[0];                        # Transfer data
    }
@@ -591,6 +583,10 @@ sub delete($$)                                                                  
  {my ($tree, $key) = @_;                                                        # Tree, key
   @_ == 2 or confess;
   my @k = $tree->keys->@*;
+
+  if (@k == 1 and !$k[0] == $key and $tree->up and $tree->node->@* == 0)        # Delete the root node
+   {return new;
+   }
 
   if ($key < $k[0])                                                             # Less than smallest key in node
    {if (my $node = $tree->node->[0])
@@ -988,8 +984,6 @@ END
      10
 END
 
-  $debug = 1;
-say STDERR "AAAA\n", dump($t->root);
   $t = $t->delete(10);  ok T($t, <<END);
  3 6 8
    1 2
@@ -997,29 +991,57 @@ say STDERR "AAAA\n", dump($t->root);
    7
    9
 END
-say STDERR "BBBB ", dump($t->root);
-exit;
 
   $t = $t->delete(9); ok T($t, <<END);
- 3 6 8
+ 3 6
    1 2
    4 5
-   7
+   7 8
 END
 
   $t = $t->delete(8); ok T($t, <<END);
- 3 6 5
+ 3 6
    1 2
    4 5
    7
 END
-  $t = $t->delete(7);
 
-  ok T($t, <<END);
- 3 6 5
+  $t = $t->delete(7); ok T($t, <<END);
+ 3 5
+   1 2
+   4
+   6
+END
+
+  $t = $t->delete(6);  ok T($t, <<END);
+ 3
    1 2
    4 5
-   7
+END
+
+  $t = $t->delete(5);  ok T($t, <<END);
+ 3
+   1 2
+   4
+END
+
+  $t = $t->delete(4);  ok T($t, <<END);
+ 2
+   1
+   3
+END
+
+  $t = $t->delete(3);  ok T($t, <<END);
+ 1 2
+END
+
+  $t = $t->delete(2);  ok T($t, <<END);
+ 1
+END
+
+  $t = $t->delete(1);
+
+  ok T($t, <<END);
 END
  }
 
