@@ -13,6 +13,7 @@ use Data::Dump qw(dump);
 use Data::Table::Text qw(:all);
 use feature qw(say current_sub);
 
+our $debug = 0;                                                                 # Debugging if true
 our $keysPerNode = 3;                                                           # Keys per node
 
 #D1 Multi-way Tree                                                              # Create and use a multi-way tree.
@@ -424,19 +425,24 @@ sub mergeWithLeftOrRight($$)                                                    
     confess unless $r->halfNode;                                                # Confirm right leaf is half full
     push $n->keys->@*, $p->keys->[$i], $r->keys->@*; splice $p->keys->@*, $i, 1;# Transfer keys
     push $n->data->@*, $p->data->[$i], $r->data->@*; splice $p->data->@*, $i, 1;# Transfer data
-    push $n->node->@*, $r->node->@* if !$n->leaf;                               # Children of merged node
-    $_->up  = $n for $r->node->@*;                                              # Update parent of children of right node
-    splice $p->node->@*, $i+1, 1;                                               # Remove link from parent to right child
+    if (!$n->leaf)                                                              # Children of merged node
+     {push $n->node->@*, $r->node->@*;                                          # Children of merged node
+      $_->up  = $n for $r->node->@*;                                            # Update parent of children of right node
+      splice $p->node->@*, $i+1, 1;                                             # Remove link from parent to right child
+     }
    }
   else                                                                          # Fill from left
    {$i > 0 or confess;                                                          # Cannot fill from left
-    my $l = $p->node->[$i-1];                                                   # Leaf on left
+    my $l = $p->node->[$i-1];                                                   # Node on left
     confess unless $l->halfNode;                                                # Confirm right leaf is half full
     unshift $n->keys->@*, $l->keys->@*, $p->keys->[$i]; splice $p->keys->@*, $i, 1;# Transfer keys
     unshift $n->data->@*, $l->data->@*, $p->data->[$i]; splice $p->data->@*, $i, 1;# Transfer data
-    unshift $n->node->@*, $l->node->@* if !$n->leaf;                            # Children of merged node
-    $_->up  = $n for $l->node->@*;                                              # Update parent of children of left node
-    splice $p->node->@*, $i-1, 1;                                               # Remove link from parent to left child
+say STDERR "AAAAAA" if $debug;
+    if (!$n->leaf)                                                              # Children of merged node
+     {unshift $n->node->@*, $l->node->@*;                                       # Children of merged node
+      $_->up  = $n for $l->node->@*;                                            # Update parent of children of left node
+      splice $p->node->@*, $i-1, 1;                                             # Remove link from parent to left child
+     }
    }
  }
 
@@ -454,40 +460,43 @@ sub mergeOrFill($)                                                              
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
   my $i = $tree->indexInParent;
-  $i > 0 or confess;                                                            # So we can find the left node
   my $p = $tree->up;                                                            # Parent
 
-  return unless if $tree->halfNode;                                             # No need if not a half node
+  return 0 unless $tree->halfNode;                                              # No need if not a half node
+
   $p->mergeOrFill;                                                              # Ensure parent is not a half node
-say STDERR "Delete node: $i ", join " ", $tree->keys->@*;
 
   if ($i > 0)                                                                   # Merge with left node
    {my $l = $p->node->[$i-1];                                                   # Left node
     my $r = $tree;                                                              # Right node
     if ($r->halfNode)
      {if ($l->halfNode)                                                         # Left and right must be half nodes, the parent yields  a key so it must be more than half full
-       {$r->mergeFromLeft;
+       {$r->mergeWithLeft;
+        return 1;
        }
       else                                                                      # Left and right must be half nodes, the parent yields  a key so it must be more than half full
        {$r->fillFromLeft;
+        return 1;
        }
      }
-    else {}                                                                     # No action required as the node is more than half full
+    confess;                                                                    # No action required as the node is more than half full
    }
   else                                                                          # Merge with right node
    {my $r = $p->node->[$i+1];                                                   # Left node
     my $l = $tree;                                                              # Right node
     if ($l->halfNode)
      {if (r->halfNode)                                                          # Left and right must be half nodes, the parent yields  a key so it must be more than half full
-       {$l->mergeFromRight;
+       {$l->mergeWithRight;
+        return 0;
        }
       else                                                                      # Left and right must be half nodes, the parent yields  a key so it must be more than half full
        {$l->fillFromRight;
+        return 0;
        }
      }
-    else {}                                                                     # No action required as the node is more than half full
+    confess;                                                                    # No action required as the node is more than half full
    }
-  return;
+  confess;
  }
 
 sub leftMostNode($)                                                             # Return the left most node below the specified one
@@ -502,19 +511,13 @@ sub rightMostNode($)                                                            
   $tree->node->[-1]->rightMostNode;                                             # Go right
  }
 
-sub deleteElementDirectly($$)                                                   #P Delete the indicated element directly and return its data
- {my ($tree, $i) = @_;                                                          # Tree, index to delete at
-  @_ == 2 or confess;
-  splice        $tree->keys->@*, $i, 1;                                         # Remove keys
-  return splice $tree->data->@*, $i, 1;                                         # Remove data and return it
- }
-
 sub deleteElement($$)                                                           #P Delete an element in a node
  {my ($tree, $i) = @_;                                                          # Tree, index to delete at
   @_ == 2 or confess;
-  $tree->mergeOrFill;
+  $i += $tree->mergeOrFill;                                                     # Increase by one if from left
   if ($tree->leaf)                                                              # Delete from a leaf
-   {return $tree->deleteElementDirectly($i);
+   {       splice $tree->keys->@*, $i, 1;                                       # Remove keys
+    return splice $tree->data->@*, $i, 1;                                       # Remove data and return it
    }
   elsif ($i > 0)                                                                # Delete from a node
    {my $r = $tree->node->[$i-1]->leftMostNode;                                  # Find previous node
@@ -719,7 +722,9 @@ test unless caller;
 use Time::HiRes qw(time);
 use Test::Most;
 
-my $develop   = -e q(/home/phil/);                                              # Developing
+my $develop  = -e q(/home/phil/);                                               # Developing
+my  $logFile = q(/home/phil/perl/cpan/TreeMulti/lib/Tree/zzzLog.txt);           # Log file
+
 my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               # Local testing mode
 
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
@@ -730,6 +735,17 @@ else
  }
 
 bail_on_fail;
+
+sub T($$)                                                                       #P Write a result to the log file
+ {my ($tree, $expected) = @_;                                                   # Tree
+  my $got = $tree->printKeys;
+  my $s = showGotVersusWanted($got, $expected);
+  return !$s unless $develop and $s;
+
+  owf($logFile, $got);
+  say STDERR $s;
+  exit;
+ }
 
 my $start = time;                                                               # Tests
 
@@ -850,20 +866,31 @@ if (1) {                                                                        
      16
 END
 
-  $t->delete(16);
-  say STDERR $t->printKeys; exit;
-  is_deeply $t->printKeys, <<END;
+  $t->delete(16); ok T($t, <<END);
  6
    3
      1 2
      4 5
-   9 12 15
+   9 12 14
      7 8
      10 11
-     13 14
-     16
+     13
+     15
 END
 
+  say STDERR $t->printKeys;
+$debug = 1;
+  $t->delete(15); ok T($t, <<END);
+ 6
+   3
+     1 2
+     4 5
+   9 12 14
+     7 8
+     10 11
+     13
+     15
+END
  }
 
 lll "Success:", time - $start;
