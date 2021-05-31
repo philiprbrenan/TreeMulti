@@ -31,16 +31,6 @@ sub new()                                                                       
    );
  }
 
-sub check($)                                                                    # Check the integrity of a node
- {my ($tree) = @_;                                                              # Tree
-  confess unless $tree;
-  confess unless $tree->keys->@* == $tree->data->@*;
-  confess if $tree->up and !$tree->up->node and !$tree->up->node->@*;
-  __SUB__->($tree->up) if $tree->up;
-  return unless my @n = $tree->node->@*;
-  confess unless $tree->keys->@*+1 == @n;
- }
-
 sub minimumNumberOfKeys  {int $keysPerNode / 2}                                 #P Minimum number of keys per node
 sub maximumNumberOfKeys  {    $keysPerNode}                                     #P Maximum number of keys per node
 sub maximumNumberOfNodes {    $keysPerNode + 1}                                 #P Maximum number of children per parent
@@ -613,27 +603,6 @@ sub insert($$$)                                                                 
     $node->data = [@d[0..$index], $data, @d[$index+1..$#d]];
    }
   root splitFullLeafNode $node
- }
-
-sub printKeysAndData($)                                                         # Print the mapping from keys to data in a tree
- {my ($t) = @_;                                                                 # Tree
-  confess unless $t;
-  my @s;
-  my $print = sub
-   {my ($t, $in) = @_;
-    return unless $t and $t->keys;
-    push @s, join ' ', ('  'x$in), $t->keys->@*, ' ', $t->data->@*;             # Print keys
-
-    if (my $nodes = $t->node)                                                   # Each key
-     {for my $n($nodes->@*)                                                     # Each key
-       {__SUB__->($n, $in+1);                                                   # Sub tree
-       }
-     }
-   };
-
-  $print->($t->root, 0);
-
-  join "\n", @s;
  }
 
 sub printKeys($;$)                                                              # Print the keys in a tree optionally marking the active key
