@@ -566,14 +566,17 @@ sub deleteElement($$)                                                           
     return splice $tree->data->@*, $i, 1;                                       # Remove data and return it
    }
   elsif ($i > 0)                                                                # Delete from a node
-   {my $r = $tree->node->[$i-1]->leftMostNode;                                  # Find previous node
-    $r->deleteElement(scalar $r->keys->@*);                                     # Remove leaf
-           splice $tree->keys->@*, $i, 1, $r->keys->[-1];                       # Transfer key
-    return splice $tree->data->@*, $i, 1, $r->data->[-1];                       # Transfer data
+   {my $l = $tree->node->[$i-1]->rightMostNode;                                 # Find previous node
+    my $k = $l->keys->[-1];
+    my $d = $l->data->[-1];
+    $l->deleteElement(-1 + scalar $l->keys->@*);                                # Remove leaf
+    splice $tree->keys->@*, $i, 1, $k;
+    splice $tree->data->@*, $i, 1, $d;
+say STDERR "YYYY" if $debug;
+    return $d;
    }
   else                                                                          # Delete from a node
-   {my $r = $tree->node->[$i+1]->rightMostNode;                                 # Find previous node
-say STDERR "XXXX" if $debug;
+   {my $r = $tree->node->[$i+1]->leftMostNode;                                 # Find previous node
     my $k = $r->keys->[0];
     my $d = $r->data->[0];
     $r->deleteElement(0);                                                       # Remove leaf
@@ -1101,7 +1104,6 @@ if (1) {
      13 14 15
 END
 
-  $debug = 1;
   $t = $t->delete(3);  ok T($t, <<END);
  9
    4 6
@@ -1109,6 +1111,18 @@ END
      5
      7 8
    12
+     10 11
+     13 14 15
+END
+exit;
+  $debug = 1;
+  $t = $t->delete(12);  ok T($t, <<END);
+ 6
+   4
+     1 2
+     5
+   9 7
+     7
      10 11
      13 14 15
 END
