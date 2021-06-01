@@ -574,75 +574,36 @@ sub iterator($)                                                                 
 sub Tree::Multi::Iterator::next($)                                              # Find the next key
  {my ($iter) = @_;                                                              # Iterator
   @_ >= 1 or confess;
-  confess unless $iter->node;                                                   # Node required
+  confess unless my $C = $iter->node;                                           # Current node required
 
-  ++$iter->count;
-  if (!defined($iter->pos) )                                                    # Initial descent
-   {$iter->pos  = 0;
-    if (my $l = $iter->node->node->[0])
-     {$iter->node = my $n = $l->leftMostNode;
-      $iter->key  = $n->keys->[0];
-      $iter->data = $n->data->[0];
-      return
-     }
-    elsif ($iter->node->keys->@*)
-     {$iter->key  = $iter->node->keys->[0];
-      $iter->data = $iter->node->data->[0];
-      return
-     }
-    else                                                                        # Empty tree
-     {$iter->more = undef;
-      return
-     }
+  ++$iter->count;                                                               # Count the calls to the iterator
+
+  my $new  = sub                                                                # Load iterator with latest position
+   {my ($node, $pos) = @_;                                                      # Parameters
+    $iter->node = $node;
+    $iter->pos  = $pos //= 0;
+    $iter->key  = $node->keys->[$pos];
+    $iter->data = $node->data->[$pos]
+   };
+
+  my $done = sub {$iter->more = undef};                                         # The tree has been completely traversed
+
+  if (!defined($iter->pos))                                                     # Initial descent
+   {my $l = $C->node->[0];
+    return $l ? &$new($l->leftMostNode) : $C->keys->@* ? &$new($C) : &$done;    # Start node or done if empty tree
    }
 
-  if ($iter->node->leaf)                                                        # Leaf
-   {my $i = ++$iter->pos;
-    if ($i < $iter->node->keys->@*)
-     {$iter->pos  = $i;
-      $iter->key  = $iter->node->keys->[$i];
-      $iter->data = $iter->node->data->[$i];
-      return
+  my $up = sub                                                                  # Iterate up to next unvisited node
+   {for(my $n = $C; my $p = $n->up; $n = $n->up)
+     {my $i = $n->indexInParent;
+      return &$new($p, $i) if $i < $p->keys->@*;
      }
-    else                                                                        # Finished with leaf
-     {for(my $n = $iter->node; my $p = $n->up; $n = $n->up)
-       {my $i = $n->indexInParent;
-        if ($i < $p->keys->@*)
-         {$iter->node = $p;
-          $iter->pos  = $i;
-          $iter->key  = my $k = $p->keys->[$i];
-          $iter->data = my $d = $p->data->[$i];
-          return
-         }
-       }
-      $iter->more = undef;                                                      # Finished iteration
-      return
-     }
-   }
-  else                                                                          # On a node
-   {my $i = ++$iter->pos;
-    if ($i < $iter->node->node->@*)
-     {$iter->pos  = 0;
-      $iter->node = my $n = $iter->node->node->[$i]->leftMostNode;
-      $iter->key  = $n->keys->[0];
-      $iter->data = $n->data->[0];
-      return
-     }
-    elsif (my $p = $iter->node->up)                                             # Finished with node
-     {for(my $n = $iter->node; my $p = $n->up; $n = $n->up)
-       {my $i = $n->indexInParent;
-        if ($i < $iter->node->keys->@*)
-         {$iter->node = $p;
-          $iter->pos  = $i;
-          $iter->key  = my $k = $p->keys->[$i];
-          $iter->data = my $d = $p->data->[$i];
-          return
-         }
-       }
-      $iter->more = undef;                                                      # Finished iteration
-      return
-     }
-   }
+    &$done                                                                      # No unvisited nodes
+   };
+
+  my $i = ++$iter->pos;
+  $C->leaf ? ($i < $C->keys->@* ? &$new($C, $i)                       : &$up)   # Leaf
+           : ($i < $C->node->@* ? &$new($C->node->[$i]->leftMostNode) : &$up)   # Node
  }
 
 sub printKeys($;$)                                                              # Print the keys in a tree optionally marking the active key
