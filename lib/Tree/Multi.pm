@@ -1376,12 +1376,9 @@ END
    }
  }
 
-if (1) {                                                                        #TIterator
-  local $keysPerNode = 3;
+if (1) {                                                                        #Titerator
+  local $keysPerNode = 3;  my $N = 256; my $e = 0;  my $t = new;
 
-  my $t = new; my $N = 12;
-
-  my $e = 0;
   for my $n(0..$N)
    {$t = insert($t, $n, $n);
     my @n;
@@ -1392,19 +1389,8 @@ if (1) {                                                                        
    }
 
   is_deeply $e, 0;
-
-  ok T($t, <<END);
- 5
-   2
-     0 1
-     3 4
-   8 11
-     6 7
-     9 10
-     12
-END
  }
 
-ok 1;
+ok 1 for 1..2;
 
 lll "Success:", time - $start;
