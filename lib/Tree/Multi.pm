@@ -452,7 +452,8 @@ sub rightMostNode($)                                                            
 
 sub height($)                                                                   # Return the height of the tree
  {my ($tree) = @_;                                                              # Tree
-  return 1 if $tree->leaf;                                                  # We are on a leaf so we have arrived at the left most node
+  return 1 if $tree->leaf  &&  $tree->up;                                       # We are on a leaf
+  return 0 if $tree->leaf;                                                      # We are on the root and it is a leaf
   1 + $tree->node->[0]->height;
  }
 
@@ -552,6 +553,85 @@ sub insert($$$)                                                                 
    }
 
   root splitFullLeafNode $node
+ }
+
+sub iterator($)                                                                 # Make an iterator for a tree
+ {my ($tree) = @_;                                                              # Tree
+  @_ == 1 or confess;
+  my $i = genHash(__PACKAGE__.'::Iterator',                                     # Iterator
+    tree  => $tree,                                                             # Tree we are iterating over
+    node  => $tree,                                                             # Current node within tree
+    pos   => undef,                                                             # Current position within node
+    key   => undef,                                                             # Key at this position
+    data  => undef,                                                             # Data at this position
+    count => 0,                                                                 # Counter
+    more  => 1,                                                                 # Iteration not yet finished
+   );
+  $i->next;                                                                     # First element if any
+  $i                                                                            # Iterator
+ }
+
+sub Tree::Multi::Iterator::next($)                                              # Find the next key
+ {my ($iter) = @_;                                                              # Iterator
+  @_ >= 1 or confess;
+  confess unless $iter->node;                                                   # Node required
+
+  ++$iter->count;
+  if (!defined($iter->pos) )                                                    # Initial descent
+   {$iter->pos  = 0;
+    $iter->node = my $n = $iter->node->node->[0]->leftMostNode;
+    $iter->key  = $n->keys->[0];
+    $iter->data = $n->data->[0];
+    return
+   }
+
+  if ($iter->node->leaf)                                                        # Leaf
+   {my $i = ++$iter->pos;
+    if ($i < $iter->node->keys->@*)
+     {$iter->pos  = $i;
+      $iter->key  = $iter->node->keys->[$i];
+      $iter->data = $iter->node->data->[$i];
+      return
+     }
+    else                                                                        # Finished with leaf
+     {for(my $n = $iter->node; my $p = $n->up; $n = $n->up)
+       {my $i = $n->indexInParent;
+        if ($i < $p->keys->@*)
+         {$iter->node = $p;
+          $iter->pos  = $i;
+          $iter->key  = my $k = $p->keys->[$i];
+          $iter->data = my $d = $p->data->[$i];
+          return
+         }
+       }
+      $iter->more = undef;                                                      # Finished iteration
+      return
+     }
+   }
+  else                                                                          # On a node
+   {my $i = ++$iter->pos;
+    if ($i < $iter->node->node->@*)
+     {$iter->pos  = 0;
+      $iter->node = my $n = $iter->node->node->[$i]->leftMostNode;
+      $iter->key  = $n->keys->[0];
+      $iter->data = $n->data->[0];
+      return
+     }
+    elsif (my $p = $iter->node->up)                                             # Finished with node
+     {for(my $n = $iter->node; my $p = $n->up; $n = $n->up)
+       {my $i = $n->indexInParent;
+        if ($i < $iter->node->keys->@*)
+         {$iter->node = $p;
+          $iter->pos  = $i;
+          $iter->key  = my $k = $p->keys->[$i];
+          $iter->data = my $d = $p->data->[$i];
+          return
+         }
+       }
+      $iter->more = undef;                                                      # Finished iteration
+      return
+     }
+   }
  }
 
 sub printKeys($;$)                                                              # Print the keys in a tree optionally marking the active key
@@ -674,7 +754,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 132;
+ {plan tests => 135;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -1201,7 +1281,7 @@ END
 END
  }
 
-if (1) {                                                                        # Disordered insertions
+if (1) {                                                                        #Theight # Disordered insertions
   local $keysPerNode = 7;
 
   my $t = new; my $N = 256;
@@ -1271,17 +1351,43 @@ END
 
   if (1)
    {my $e = 0;
-    is_deeply $t->height, 4;
+    is_deeply $t->height, my $h = 4;
     for my $k(sort {reverse($a) cmp reverse($b)} keys %t)
      {for my $K(sort keys %t)
        {++$e unless $t->find($K) == $t{$K};
        }
         ++$e unless $t->find($k) == $t{$k};  $t->delete($k); delete $t{$k};
         ++$e if     $t->find($k);
+        ++$e if     $t->height > $h;
      }
+    is_deeply $t->height, 0;
     ok !$e;
    }
  }
 
+if (1) {                                                                        #TIterator
+  local $keysPerNode = 3;
+
+  my $t = new; my $N = 12;
+
+  $t = insert($t, $_, $_) for 0..$N;
+
+  ok T($t, <<END);
+ 5
+   2
+     0 1
+     3 4
+   8 11
+     6 7
+     9 10
+     12
+END
+
+  my @n;
+  for(my $i = $t->iterator; $i->more; $i->next)
+   {push @n, $i->key;
+   }
+  is_deeply [@n], [0..$N];
+ }
 
 lll "Success:", time - $start;
