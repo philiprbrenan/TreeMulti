@@ -668,7 +668,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 129;
+ {plan tests => 131;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -1194,5 +1194,88 @@ END
   ok $t->find(15); $t = $t->delete(15);  ok !$t->find(15); ok T($t, <<END);
 END
  }
+
+
+if (1) {
+  local $keysPerNode = 7;
+
+  my $t = new; my $N = 256;
+
+  my %t = map {$_=>2*$_} my @t = map{$_ = scalar reverse $_; s/\A0+//r} 1..$N;
+
+  $t = insert($t, $_, 2 * $_) for @t;
+
+  ok T($t, <<END);
+ 201
+   32 61 81
+     5 11 16 22 27
+       1 2 3 4
+       6 7 8 9
+       12 13 14 15
+       17 18 19 21
+       23 24 25 26
+       28 29 31
+     37 43 52
+       33 34 35 36
+       38 39 41 42
+       44 45 46 47 48 49 51
+       53 54 55 56 57 58 59
+     66 71 76
+       62 63 64 65
+       67 68 69
+       72 73 74 75
+       77 78 79
+     86 91 96 111 132 161
+       82 83 84 85
+       87 88 89
+       92 93 94 95
+       97 98 99 101 102
+       112 121 122 131
+       141 142 151 152
+       171 181 191
+   401 601 801
+     222 251 301 322 351
+       202 211 212 221
+       231 232 241 242
+       252 261 271 281 291
+       302 311 312 321
+       331 332 341 342
+       352 361 371 381 391
+     422 451 501 522 551
+       402 411 412 421
+       431 432 441 442
+       452 461 471 481 491
+       502 511 512 521
+       531 532 541 542
+       552 561 571 581 591
+     622 651 701 722 751
+       602 611 612 621
+       631 632 641 642
+       652 661 671 681 691
+       702 711 712 721
+       731 732 741 742
+       761 771 781 791
+     822 851 901 922 951
+       802 811 812 821
+       831 832 841 842
+       861 871 881 891
+       902 911 912 921
+       931 932 941 942
+       961 971 981 991
+END
+
+  if (1)
+   {my $e = 0;
+    for my $k(sort {reverse($a) cmp reverse($b)} keys %t)
+     {for my $K(sort keys %t)
+       {++$e unless $t->find($K) == $t{$K};
+       }
+        ++$e unless $t->find($k) == $t{$k};  $t->delete($k); delete $t{$k};
+        ++$e if     $t->find($k);
+     }
+    ok !$e;
+   }
+ }
+
 
 lll "Success:", time - $start;
