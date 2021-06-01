@@ -410,16 +410,16 @@ sub mergeOrFill($)                                                              
    }
  }
 
-sub leftMost($)                                                             # Return the left most node below the specified one
+sub leftMost($)                                                                 # Return the left most node below the specified one
  {my ($tree) = @_;                                                              # Tree
   return $tree if $tree->leaf;                                                  # We are on a leaf so we have arrived at the left most node
-  $tree->node->[0]->leftMost;                                               # Go left
+  $tree->node->[0]->leftMost;                                                   # Go left
  }
 
-sub rightMost($)                                                            # Return the right most node below the specified one
+sub rightMost($)                                                                # Return the right most node below the specified one
  {my ($tree) = @_;                                                              # Tree
   return $tree if $tree->leaf;                                                  # We are on a leaf so we have arrived at the left most node
-  $tree->node->[-1]->rightMost;                                             # Go right
+  $tree->node->[-1]->rightMost;                                                 # Go right
  }
 
 sub height($)                                                                   # Return the height of the tree
@@ -444,13 +444,13 @@ sub deleteElement($$)                                                           
      }
    }
   elsif ($i > 0)                                                                # Delete from a node
-   {my $l = $tree->node->[$i]->rightMost;                                   # Find previous node
+   {my $l = $tree->node->[$i]->rightMost;                                       # Find previous node
     splice  $tree->keys->@*, $i, 1, $l->keys->[-1];
     splice  $tree->data->@*, $i, 1, $l->data->[-1];
     $l->deleteElement(-1 + scalar $l->keys->@*);                                # Remove leaf
    }
   else                                                                          # Delete from a node
-   {my $r = $tree->node->[1]->leftMost;                                     # Find previous node
+   {my $r = $tree->node->[1]->leftMost;                                         # Find previous node
     splice  $tree->keys->@*,  0, 1, $r->keys->[0];
     splice  $tree->data->@*,  0, 1, $r->data->[0];
     $r->deleteElement(0);                                                       # Remove leaf
@@ -557,20 +557,20 @@ sub Tree::Multi::Iterator::next($)                                              
 
   if (!defined($iter->pos))                                                     # Initial descent
    {my $l = $C->node->[0];
-    return $l ? &$new($l->leftMost) : $C->keys->@* ? &$new($C) : &$done;    # Start node or done if empty tree
+    return $l ? &$new($l->leftMost) : $C->keys->@* ? &$new($C) : &$done;        # Start node or done if empty tree
    }
 
-  my $up = sub                                                                  # Iterate up to next unvisited node
+  my $up = sub                                                                  # Iterate up to next node that has not been visited
    {for(my $n = $C; my $p = $n->up; $n = $n->up)
      {my $i = $n->indexInParent;
       return &$new($p, $i) if $i < $p->keys->@*;
      }
-    &$done                                                                      # No unvisited nodes
+    &$done                                                                      # No nodes not visited
    };
 
   my $i = ++$iter->pos;
-  $C->leaf ? ($i < $C->keys->@* ? &$new($C, $i)                       : &$up)   # Leaf
-           : ($i < $C->node->@* ? &$new($C->node->[$i]->leftMost) : &$up)   # Node
+  $C->leaf ? ($i < $C->keys->@* ? &$new($C, $i)                   : &$up)       # Leaf
+           : ($i < $C->node->@* ? &$new($C->node->[$i]->leftMost) : &$up)       # Node
  }
 
 sub printKeys($;$)                                                              # Print the keys in a tree optionally marking the active key
@@ -651,6 +651,35 @@ Return the root node of a tree.
      Parameter  Description
   1  $tree      Tree
 
+B<Example:>
+
+
+    local $keysPerNode = 3; my $N = 13; my $t = new;
+
+    for my $n(1..$N)
+     {$t = insert($t, $n, $n);
+     }
+
+    is_deeply $t->leftMost ->keys, [1, 2];
+    is_deeply $t->rightMost->keys, [13];
+    ok $t->leftMost ->leaf;
+    ok $t->rightMost->leaf;
+
+    ok $t->root;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+
+    ok T($t, <<END);
+   6
+     3
+       1 2
+       4 5
+     9 12
+       7 8
+       10 11
+       13
+  END
+
+
 =head2 leaf($tree)
 
 Confirm that the tree is a leaf.
@@ -658,13 +687,36 @@ Confirm that the tree is a leaf.
      Parameter  Description
   1  $tree      Tree
 
-=head2 findAndSplit($tree, $key)
+B<Example:>
 
-Find a key in a tree splitting full nodes along the path to the key
 
-     Parameter  Description
-  1  $tree      Tree
-  2  $key       Key
+    local $keysPerNode = 3; my $N = 13; my $t = new;
+
+    for my $n(1..$N)
+     {$t = insert($t, $n, $n);
+     }
+
+    is_deeply $t->leftMost ->keys, [1, 2];
+    is_deeply $t->rightMost->keys, [13];
+
+    ok $t->leftMost ->leaf;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+
+    ok $t->rightMost->leaf;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+    ok $t->root;
+
+    ok T($t, <<END);
+   6
+     3
+       1 2
+       4 5
+     9 12
+       7 8
+       10 11
+       13
+  END
+
 
 =head2 find($tree, $key)
 
@@ -744,12 +796,74 @@ Return the left most node below the specified one
      Parameter  Description
   1  $tree      Tree
 
+B<Example:>
+
+
+    local $keysPerNode = 3; my $N = 13; my $t = new;
+
+    for my $n(1..$N)
+     {$t = insert($t, $n, $n);
+     }
+
+
+    is_deeply $t->leftMost ->keys, [1, 2];  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+    is_deeply $t->rightMost->keys, [13];
+
+    ok $t->leftMost ->leaf;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+    ok $t->rightMost->leaf;
+    ok $t->root;
+
+    ok T($t, <<END);
+   6
+     3
+       1 2
+       4 5
+     9 12
+       7 8
+       10 11
+       13
+  END
+
+
 =head2 rightMost($tree)
 
 Return the right most node below the specified one
 
      Parameter  Description
   1  $tree      Tree
+
+B<Example:>
+
+
+    local $keysPerNode = 3; my $N = 13; my $t = new;
+
+    for my $n(1..$N)
+     {$t = insert($t, $n, $n);
+     }
+
+    is_deeply $t->leftMost ->keys, [1, 2];
+
+    is_deeply $t->rightMost->keys, [13];  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+    ok $t->leftMost ->leaf;
+
+    ok $t->rightMost->leaf;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+    ok $t->root;
+
+    ok T($t, <<END);
+   6
+     3
+       1 2
+       4 5
+     9 12
+       7 8
+       10 11
+       13
+  END
+
 
 =head2 height($tree)
 
@@ -1178,6 +1292,20 @@ Find the next key
      Parameter  Description
   1  $iter      Iterator
 
+B<Example:>
+
+
+    local $keysPerNode = 3; my $N = 256; my $e = 0;  my $t = new;
+
+    for my $n(0..$N)
+     {$t = insert($t, $n, $n);
+      my @n; for(my $i = $t->iterator; $i->more; $i->next) {push @n, $i->key}
+      ++$e unless dump(\@n) eq dump [0..$n];
+     }
+
+    is_deeply $e, 0;
+
+
 =head2 printKeys($tree, $i)
 
 Print the keys in a tree optionally marking the active key
@@ -1462,6 +1590,14 @@ Split a full leaf and return the new parent or return the existing node if it do
 
      Parameter  Description
   1  $node      Node to split
+
+=head2 findAndSplit($tree, $key)
+
+Find a key in a tree splitting full nodes along the path to the key
+
+     Parameter  Description
+  1  $tree      Tree
+  2  $key       Key
 
 =head2 indexInParent($tree)
 
@@ -2249,7 +2385,7 @@ END
    }
  }
 
-if (1) {                                                                        #Titerator
+if (1) {                                                                        #Titerator #TTree::Multi::Iterator::next  #TTree::Multi::Iterator::more
   local $keysPerNode = 3; my $N = 256; my $e = 0;  my $t = new;
 
   for my $n(0..$N)
