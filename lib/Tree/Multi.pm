@@ -14,13 +14,13 @@ use Data::Table::Text qw(:all);
 use feature qw(say current_sub);
 
 our $debug = 0;                                                                 # Debugging if true
-our $keysPerNode = 3;                                                           # Keys per node
+our $keysPerNode = 3;                                                           # Keys per node which can be localized because it is ours
 
 #D1 Multi-way Tree                                                              # Create and use a multi-way tree.
 
 my $nodes = 0;
 
-sub new()                                                                       #P Create a new multi-way tree node
+sub new()                                                                       #P Create a new multi-way tree node.
  {my () = @_;                                                                   # Key, $data, parent node, index of link from parent node
   genHash(__PACKAGE__,                                                          # Multi tree node
     number=> ++$nodes,                                                          # Number of the node for debugging purposes
@@ -31,36 +31,36 @@ sub new()                                                                       
    );
  }
 
-sub minimumNumberOfKeys  {int $keysPerNode / 2}                                 #P Minimum number of keys per node
-sub maximumNumberOfKeys  {    $keysPerNode}                                     #P Maximum number of keys per node
-sub maximumNumberOfNodes {    $keysPerNode + 1}                                 #P Maximum number of children per parent
+sub minimumNumberOfKeys  {int $keysPerNode / 2}                                 #P Minimum number of keys per node.
+sub maximumNumberOfKeys  {    $keysPerNode}                                     #P Maximum number of keys per node.
+sub maximumNumberOfNodes {    $keysPerNode + 1}                                 #P Maximum number of children per parent.
 
-sub fullNode($)                                                                 #P Confirm that a node is full
+sub full($)                                                                     #P Confirm that a node is full.
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
   $tree->keys->@* == maximumNumberOfKeys
  }
 
-sub halfNode($)                                                                 #P Confirm that a node is half full
+sub halfFull($)                                                                 #P Confirm that a node is half full.
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
   $tree->keys->@* == minimumNumberOfKeys
  }
 
-sub root($)                                                                     # Return the root node of a tree
+sub root($)                                                                     # Return the root node of a tree.
  {my ($tree) = @_;                                                              # Tree
   confess unless $tree;
   for(; $tree->up; $tree = $tree->up) {}
   $tree
  }
 
-sub leaf($)                                                                     # Confirm that the tree is a leaf
+sub leaf($)                                                                     # Confirm that the tree is a leaf.
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
   ! scalar $tree->node->@*                                                      # No children so it must be a leaf
  }
 
-sub separateKeys($)                                                             #P Return ([lower], center, [upper]) keys
+sub separateKeys($)                                                             #P Return ([lower], center, [upper]) keys.
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
   my @k = $node->keys->@*;
@@ -125,17 +125,17 @@ sub splitNode($)                                                                
   my ($dl, $d, $dr) = separateData $node;
   my ($cl, $cr)     = separateNode $node;
 
-  my ($nl, $nr)     = (new, new);
-  $nl->up = $nr->up = $p;
-  $nl->keys = $kl; $nl->data = $dl; $nl->node = $cl; reUp($nl, @$cl);
-  $nr->keys = $kr; $nr->data = $dr; $nr->node = $cr; reUp($nr, @$cr);
+  my ($l, $r) = (new, new);                                                     # New child nodes
+  $l->up   = $r->up = $p;
+  $l->keys = $kl; $l->data = $dl; $l->node = $cl; reUp($l, @$cl);
+  $r->keys = $kr; $r->data = $dr; $r->node = $cr; reUp($r, @$cr);
 
-  my @n = $p->node->@*;
-  for my $i(keys @n)                                                            # Add new child to parent known to be not full
+  my @n = $p->node->@*;                                                         # Insert new nodes in parent known to be not full
+  for my $i(keys @n)
    {if ($n[$i] == $node)
      {splice $p->keys->@*, $i, 0, $k;
       splice $p->data->@*, $i, 0, $d;
-      splice $p->node->@*, $i, 1, $nl, $nr;
+      splice $p->node->@*, $i, 1, $l, $r;
       return $p;                                                                # Return parent as we have delete the original node
      }
    }
@@ -154,14 +154,14 @@ sub splitRootNode($)                                                            
   my ($cl, $cr)     = separateNode $node;
 
   my $p = new;
-  my ($nl, $nr)     = (new, new);
-  $nl->up = $nr->up = $p;
-  $nl->keys = $kl; $nl->data = $dl; $nl->node = $cl; reUp($nl, @$cl);
-  $nr->keys = $kr; $nr->data = $dr; $nr->node = $cr; reUp($nr, @$cr);
+  my ($l, $r)     = (new, new);
+  $l->up = $r->up = $p;
+  $l->keys = $kl; $l->data = $dl; $l->node = $cl; reUp($l, @$cl);
+  $r->keys = $kr; $r->data = $dr; $r->node = $cr; reUp($r, @$cr);
 
   $p->keys = [$k];
   $p->data = [$d];
-  $p->node = [$nl, $nr];
+  $p->node = [$l, $r];
   $p                                                                            # Return new root
  }
 
@@ -315,7 +315,7 @@ sub fillFromLeftOrRight($$)                                                     
  {my ($n, $dir) = @_;                                                           # Node to fill, node to fill from 0 for left or 1 for right
   @_ == 2 or confess;
 
-  confess unless    $n->halfNode;                                               # Confirm leaf is half full
+  confess unless    $n->halfFull;                                               # Confirm leaf is half full
   confess unless my $p = $n->up;                                                # Parent of leaf
   my $i = $n->indexInParent;                                                    # Index of leaf in parent
 
@@ -345,16 +345,16 @@ sub mergeWithLeftOrRight($$)                                                    
  {my ($n, $dir) = @_;                                                           # Node to merge into, node to merge is on right if 1 else left
   @_ == 2 or confess;
 
-  confess unless    $n->halfNode;                                               # Confirm leaf is half full
+  confess unless    $n->halfFull;                                               # Confirm leaf is half full
   confess unless my $p = $n->up;                                                # Parent of leaf
-  confess if        $p->halfNode and $p->up;                                    # Parent must have more than the minimum number of keys because we need to remove one unless it is the root of the tree
+  confess if        $p->halfFull and $p->up;                                    # Parent must have more than the minimum number of keys because we need to remove one unless it is the root of the tree
 
   my $i = $n->indexInParent;                                                    # Index of leaf in parent
 
   if ($dir)                                                                     # Merge with right hand sibling
    {$i < $p->node->@* - 1 or confess;                                           # Cannot fill from right
     my $r = $p->node->[$i+1];                                                   # Leaf on right
-    confess unless $r->halfNode;                                                # Confirm right leaf is half full
+    confess unless $r->halfFull;                                                # Confirm right leaf is half full
     push $n->keys->@*, splice($p->keys->@*, $i, 1), $r->keys->@*;               # Transfer keys
     push $n->data->@*, splice($p->data->@*, $i, 1), $r->data->@*;               # Transfer data
     if (!$n->leaf)                                                              # Children of merged node
@@ -366,7 +366,7 @@ sub mergeWithLeftOrRight($$)                                                    
   else                                                                          # Merge with left hand sibling
    {$i > 0 or confess;                                                          # Cannot fill from left
     my $l = $p->node->[$i-1];                                                   # Node on left
-    confess unless $l->halfNode;                                                # Confirm right leaf is half full
+    confess unless $l->halfFull;                                                # Confirm right leaf is half full
     unshift $n->keys->@*, $l->keys->@*, splice $p->keys->@*, $i-1, 1;           # Transfer keys
     unshift $n->data->@*, $l->data->@*, splice $p->data->@*, $i-1, 1;           # Transfer data
     if (!$n->leaf)                                                              # Children of merged node
@@ -384,8 +384,8 @@ sub mergeRoot($$)                                                               
   confess if $tree->up;                                                         # Must be at the root
   confess if $tree->leaf;                                                       # A root that is a leaf cannot be merged
   confess unless $tree->keys->@* == 1;                                          # Root must have only one key
-  confess unless (my $l = $tree->node->[0])->halfNode;
-  confess unless (my $r = $tree->node->[1])->halfNode;
+  confess unless (my $l = $tree->node->[0])->halfFull;
+  confess unless (my $r = $tree->node->[1])->halfFull;
   $tree->keys = $child->keys = [$l->keys->@*, $tree->keys->@*, $r->keys->@*];
   $tree->data = $child->data = [$l->data->@*, $tree->data->@*, $r->data->@*];
   $tree->node = $child->node = [$l->node->@*,                  $r->node->@*];
@@ -397,26 +397,25 @@ sub mergeOrFill($)                                                              
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
 
-  return  unless $tree->halfNode;                                               # No need to merge of if not a half node
+  return  unless $tree->halfFull;                                               # No need to merge of if not a half node
 
   confess unless my $p = $tree->up;                                             # Parent exists
 
-  if (!$p->up and $p->keys->@* == 1 and $p->node->[0]->halfNode and $p->node->[1]->halfNode)  # Parent is the root and it only has one key - merge into the child
+  if (!$p->up and $p->keys->@* == 1 and $p->node->[0]->halfFull and $p->node->[1]->halfFull)  # Parent is the root and it only has one key - merge into the child
    {$p->mergeRoot($tree);
     return;
    }
 
-  if ($p->up and $p->halfNode)                                                  # Parent is half node so can be merged or filled first
+  if ($p->up and $p->halfFull)                                                  # Parent is half node so can be merged or filled first
    {$p->mergeOrFill;
    }
 
   if (my $i = $tree->indexInParent)                                             # Merge with left node
-   {my $l = $tree->up->node->[$i-1];                                                   # Left node
+   {my $l = $tree->up->node->[$i-1];                                            # Left node
     my $r = $tree;                                                              # Right node
 
-
-    if   ($r->halfNode)
-     {if ($l->halfNode)                                                         # Merge as left and right nodes are half full
+    if   ($r->halfFull)
+     {if ($l->halfFull)                                                         # Merge as left and right nodes are half full
        {$r->mergeWithLeftOrRight(0);
        }
       else                                                                      # Left is not a half node whereas right is so steal from left
@@ -427,8 +426,8 @@ sub mergeOrFill($)                                                              
   else                                                                          # Merge with right node
    {my $r = $p->node->[1];                                                      # Right node
     my $l = $tree;                                                              # Left node
-    if   ($l->halfNode)
-     {if ($r->halfNode)                                                         # Merge as left and right nodes are half full
+    if   ($l->halfFull)
+     {if ($r->halfFull)                                                         # Merge as left and right nodes are half full
        {$l->mergeWithLeftOrRight(1);
        }
       else                                                                      # Right is not a half node whereas left is so steal from right
