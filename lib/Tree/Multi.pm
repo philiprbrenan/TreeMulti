@@ -450,6 +450,12 @@ sub rightMostNode($)                                                            
   $tree->node->[-1]->rightMostNode;                                             # Go right
  }
 
+sub height($)                                                                   # Return the height of the tree
+ {my ($tree) = @_;                                                              # Tree
+  return 1 if $tree->leaf;                                                  # We are on a leaf so we have arrived at the left most node
+  1 + $tree->node->[0]->height;
+ }
+
 sub deleteElement($$)                                                           #P Delete an element in a node
  {my ($tree, $i) = @_;                                                          # Tree, index to delete at
   @_ == 2 or confess;
@@ -668,7 +674,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 131;
+ {plan tests => 132;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -1195,15 +1201,14 @@ END
 END
  }
 
-
-if (1) {
+if (1) {                                                                        # Disordered insertions
   local $keysPerNode = 7;
 
   my $t = new; my $N = 256;
 
   my %t = map {$_=>2*$_} my @t = map{$_ = scalar reverse $_; s/\A0+//r} 1..$N;
 
-  $t = insert($t, $_, 2 * $_) for @t;
+  $t = insert($t, $_, $t{$_}) for @t;
 
   ok T($t, <<END);
  201
@@ -1266,6 +1271,7 @@ END
 
   if (1)
    {my $e = 0;
+    is_deeply $t->height, 4;
     for my $k(sort {reverse($a) cmp reverse($b)} keys %t)
      {for my $K(sort keys %t)
        {++$e unless $t->find($K) == $t{$K};
