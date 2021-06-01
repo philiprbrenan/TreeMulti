@@ -1377,7 +1377,7 @@ END
  }
 
 if (1) {                                                                        #Titerator
-  local $keysPerNode = 3;  my $N = 256; my $e = 0;  my $t = new;
+  local $keysPerNode = 3; my $N = 256; my $e = 0;  my $t = new;
 
   for my $n(0..$N)
    {$t = insert($t, $n, $n);
