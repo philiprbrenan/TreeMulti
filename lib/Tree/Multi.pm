@@ -1381,10 +1381,7 @@ if (1) {                                                                        
 
   for my $n(0..$N)
    {$t = insert($t, $n, $n);
-    my @n;
-    for(my $i = $t->iterator; $i->more; $i->next)
-     {push @n, $i->key;
-     }
+    my @n; for(my $i = $t->iterator; $i->more; $i->next) {push @n, $i->key}
     ++$e unless dump(\@n) eq dump [0..$n];
    }
 
