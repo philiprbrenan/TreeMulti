@@ -585,6 +585,11 @@ sub Tree::Multi::Iterator::next($)                                              
       $iter->data = $n->data->[0];
       return
      }
+    elsif ($iter->node->keys->@*)
+     {$iter->key  = $iter->node->keys->[0];
+      $iter->data = $iter->node->data->[0];
+      return
+     }
     else                                                                        # Empty tree
      {$iter->more = undef;
       return
@@ -1376,15 +1381,17 @@ if (1) {                                                                        
 
   my $t = new; my $N = 12;
 
-  if (1)
-   {my @n;
+  my $e = 0;
+  for my $n(0..$N)
+   {$t = insert($t, $n, $n);
+    my @n;
     for(my $i = $t->iterator; $i->more; $i->next)
      {push @n, $i->key;
      }
-    is_deeply [@n], [];
+    ++$e unless dump(\@n) eq dump [0..$n];
    }
 
-  $t = insert($t, $_, $_) for 0..$N;
+  is_deeply $e, 0;
 
   ok T($t, <<END);
  5
@@ -1396,14 +1403,8 @@ if (1) {                                                                        
      9 10
      12
 END
-
-  if (1)
-   {my @n;
-    for(my $i = $t->iterator; $i->more; $i->next)
-     {push @n, $i->key;
-     }
-    is_deeply [@n], [0..$N];
-   }
  }
+
+ok 1;
 
 lll "Success:", time - $start;
