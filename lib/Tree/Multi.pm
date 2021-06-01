@@ -598,7 +598,7 @@ sub printKeys($;$)                                                              
 
   $print->($tree->root, 0);                                                     # Print tree
 
-  join "\n", @s, '';
+  join "\n", @s, ''
  }
 
 #d
