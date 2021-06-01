@@ -579,10 +579,16 @@ sub Tree::Multi::Iterator::next($)                                              
   ++$iter->count;
   if (!defined($iter->pos) )                                                    # Initial descent
    {$iter->pos  = 0;
-    $iter->node = my $n = $iter->node->node->[0]->leftMostNode;
-    $iter->key  = $n->keys->[0];
-    $iter->data = $n->data->[0];
-    return
+    if (my $l = $iter->node->node->[0])
+     {$iter->node = my $n = $l->leftMostNode;
+      $iter->key  = $n->keys->[0];
+      $iter->data = $n->data->[0];
+      return
+     }
+    else                                                                        # Empty tree
+     {$iter->more = undef;
+      return
+     }
    }
 
   if ($iter->node->leaf)                                                        # Leaf
@@ -754,7 +760,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 135;
+ {plan tests => 136;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -1370,6 +1376,14 @@ if (1) {                                                                        
 
   my $t = new; my $N = 12;
 
+  if (1)
+   {my @n;
+    for(my $i = $t->iterator; $i->more; $i->next)
+     {push @n, $i->key;
+     }
+    is_deeply [@n], [];
+   }
+
   $t = insert($t, $_, $_) for 0..$N;
 
   ok T($t, <<END);
@@ -1383,11 +1397,13 @@ if (1) {                                                                        
      12
 END
 
-  my @n;
-  for(my $i = $t->iterator; $i->more; $i->next)
-   {push @n, $i->key;
+  if (1)
+   {my @n;
+    for(my $i = $t->iterator; $i->more; $i->next)
+     {push @n, $i->key;
+     }
+    is_deeply [@n], [0..$N];
    }
-  is_deeply [@n], [0..$N];
  }
 
 lll "Success:", time - $start;
