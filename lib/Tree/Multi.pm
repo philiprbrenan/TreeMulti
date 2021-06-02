@@ -1540,7 +1540,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 150;
+ {plan tests => 152;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -2211,5 +2211,4 @@ END
   ok !$t->find (16);                                                            # Key no longer present
  }
 
-ok 1 for 1..3;
 lll "Success:", time - $start;
