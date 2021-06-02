@@ -236,6 +236,44 @@ sub splitRootLeafNode($)                                                        
  }
 
 sub findAndSplit($$)                                                            #P Find a key in a tree splitting full nodes along the path to the key
+ {my ($root, $key) = @_;                                                        # Root of tree, key
+  @_ == 2 or confess;
+
+  my $tree = $root;                                                             # Start at the root
+
+  for(1..99)                                                                    # Step down through the tree
+   {$tree = splitFullNode $tree;                                                # Split any full nodes encountered
+    confess unless my @k = $tree->keys->@*;                                     # We should have at least one key in the tree
+
+    if ($key < $k[0])                                                           # Less than smallest key in node
+     {my $n = $tree->node->[0];
+      return (-1, $tree, 0) unless $n;
+      $tree = $n;
+      next;
+     }
+
+    if ($key > $k[-1])                                                          # Greater than largest key in node
+     {my $n = $tree->node->[-1];
+      return (+1, $tree, $#k) unless $n;
+      $tree = $n;
+      next;
+     }
+
+    for my $i(keys @k)                                                          # Search the keys in this node as greater than least key and less than largest key
+     {my $s = $key <=> $k[$i];                                                  # Compare key
+      return (0, $tree, $i) if $s == 0;                                         # Found key
+      if ($s < 0)                                                               # Less than current key
+       {my $n = $tree->node->[$i];                                              # Step through if possible
+        return (-1, $tree, $i) unless $n;                                       # Leaf
+        $tree = $n;                                                             # Step
+        last;
+       }
+     }
+   }
+  confess 'Not possible';
+ }
+
+sub findAndSplit22($$)                                                          #P Find a key in a tree splitting full nodes along the path to the key
  {my ($tree, $key) = @_;                                                        # Tree, key
   @_ == 2 or confess;
 
@@ -2142,8 +2180,8 @@ if (1) {                                                                        
   ok disorderedCheck($t, 4, 256);
  }
 
-if (1) {                                                                        # Even number of keys
-  local $Tree::Multi::numberOfKeysPerNode = 3;                                  # Number of keys per node - can be even
+if (1) {                                                                        #Theight
+  local $Tree::Multi::numberOfKeysPerNode = 3;
   my $t = new;
   ok $t->height == 0;
   $t = $t->insert(1, 1); ok $t->height == 1;
