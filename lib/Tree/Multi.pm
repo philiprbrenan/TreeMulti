@@ -243,7 +243,7 @@ sub findAndSplit($$)                                                            
 
   for(1..99)                                                                    # Step down through the tree
    {$tree = splitFullNode $tree;                                                # Split any full nodes encountered
-    confess unless my @k = $tree->keys->@*;                                     # We should have at least one key in the tree
+    confess unless my @k = $tree->keys->@*;                                     # We should have at least one key in the tree because we do a special case insert for an empty tree
 
     if ($key < $k[0])                                                           # Less than smallest key in node
      {my $n = $tree->node->[0];
@@ -273,56 +273,38 @@ sub findAndSplit($$)                                                            
   confess 'Not possible';
  }
 
-sub findAndSplit22($$)                                                          #P Find a key in a tree splitting full nodes along the path to the key
- {my ($tree, $key) = @_;                                                        # Tree, key
-  @_ == 2 or confess;
-
-  $tree = splitFullNode $tree;
-  confess unless my @k = $tree->keys->@*;                                       # We should have at least one key in the tree
-
-  if ($key < $k[0])                                                             # Less than smallest key in node
-   {my $n = $tree->node->[0];
-    return $n ? __SUB__->($n, $key) : (-1, $tree, 0);
-   }
-
-  if ($key > $k[-1])                                                            # Greater than largest key in node
-   {my $n = $tree->node->[-1];
-    return $n ? __SUB__->($n, $key) : (+1, $tree, $#k);
-   }
-
-  for my $i(keys @k)                                                            # Search the keys in this node
-   {my $s = $key <=> $k[$i];                                                    # Compare key
-    return (0, $tree, $i) if $s == 0;                                           # Found key
-    if ($s < 0)                                                                 # Less than current key
-     {my $n = $tree->node->[$i];                                                # Step through
-      return $n ? __SUB__->($n, $key) : (-1, $tree, $i);                        # Leaf
-     }
-   }
-  confess 'Not possible';
- }
-
 sub find($$)                                                                    # Find a key in a tree returning its associated data or undef if the key does not exist
- {my ($tree, $key) = @_;                                                        # Tree, key
+ {my ($root, $key) = @_;                                                        # Root of tree, key
   @_ == 2 or confess;
 
-  return undef unless my @k = $tree->keys->@*;                                  # Empty node
+  my $tree = $root;                                                             # Start at the root
 
-  if ($key < $k[0])                                                             # Less than smallest key in node
-   {my $n = $tree->node->[0];
-    return $n ? __SUB__->($n, $key) : undef;
-   }
+  for(1..99)                                                                    # Step down through the tree
+   {return undef unless my @k = $tree->keys->@*;                                # Empty node
 
-  if ($key > $k[-1])                                                            # Greater than largest key in node
-   {my $n = $tree->node->[-1];
-    return $n ? __SUB__->($n, $key) : undef;
-   }
+    if ($key < $k[0])                                                           # Less than smallest key in node
+     {my $n = $tree->node->[0];
+      return undef unless $n;
+      $tree = $n;
+      next;
+     }
 
-  for my $i(keys @k)                                                            # Search the keys in this node
-   {my $s = $key <=> $k[$i];                                                    # Compare key
-    return $tree->data->[$i] if $s == 0;                                        # Found key
-    if ($s < 0)                                                                 # Less than current key
-     {my $n = $tree->node->[$i];
-      return $n ? __SUB__->($n, $key) : undef;
+    if ($key > $k[-1])                                                          # Greater than largest key in node
+     {my $n = $tree->node->[-1];
+      return undef unless $n;
+      $tree = $n;
+      next;
+     }
+
+    for my $i(keys @k)                                                          # Search the keys in this node
+     {my $s = $key <=> $k[$i];                                                  # Compare key
+      return $tree->data->[$i] if $s == 0;                                      # Found key
+      if ($s < 0)                                                               # Less than current key
+       {my $n = $tree->node->[$i];
+        return undef unless $n;
+        $tree = $n;
+        last;
+       }
      }
    }
   confess 'Not possible';
