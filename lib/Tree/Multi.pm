@@ -240,7 +240,7 @@ sub findAndSplit($$)                                                            
   my $tree = $root;                                                             # Start at the root
 
   for(0..999)                                                                   # Step down through the tree
-   {splitFullNode $tree;                                                # Split any full nodes encountered
+   {splitFullNode $tree;                                                        # Split any full nodes encountered
     confess unless my @k = $tree->keys->@*;                                     # We should have at least one key in the tree because we do a special case insert for an empty tree
 
     if ($key < $k[0])                                                           # Less than smallest key in node
@@ -377,23 +377,6 @@ sub mergeWithLeftOrRight($$)                                                    
    }
  }
 
-sub mergeRoot($$)                                                               #P Merge the root node
- {my ($tree, $child) = @_;                                                      # Tree, the child to merge into
-  @_ == 2 or confess;
-
-  confess if $tree->up;                                                         # Must be at the root
-  confess if $tree->leaf;                                                       # A root that is a leaf cannot be merged
-  confess unless $tree->keys->@* == 1;                                          # Root must have only one key
-  confess unless (my $l = $tree->node->[0])->halfFull;
-  confess unless (my $r = $tree->node->[1])->halfFull;
-
-  $tree->keys = $child->keys = [$l->keys->@*, $tree->keys->@*, $r->keys->@*];
-  $tree->data = $child->data = [$l->data->@*, $tree->data->@*, $r->data->@*];
-  $tree->node = $child->node = [$l->node->@*,                  $r->node->@*];
-
-  reUp($tree, $tree->node->@*);
- }
-
 sub mergeOrFill($)                                                              #P make a node larger than a half node
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
@@ -403,11 +386,18 @@ sub mergeOrFill($)                                                              
 
   if (!$p->up and $p->keys->@* == 1 and $p->node->[0]->halfFull                 # Parent is the root and it only has one key - merge into the child
                                     and $p->node->[1]->halfFull)
-   {$p->mergeRoot($tree);
+   {my $l = $p->node->[0];                                                      # Merge the root node
+    my $r = $p->node->[1];
+    $p->keys = $tree->keys = [$l->keys->@*, $p->keys->@*, $r->keys->@*];
+    $p->data = $tree->data = [$l->data->@*, $p->data->@*, $r->data->@*];
+    $p->node = $tree->node = [$l->node->@*,               $r->node->@*];
+
+    reUp($p, $p->node->@*);
+
     return;
    }
 
-  $p->mergeOrFill if $p->up and $p->halfFull;                                   # Parent is half node so can be merged or filled first
+  __SUB__->($p) if $p->up and $p->halfFull;                                     # Parent is half node so can be merged or filled first
 
   if (my $i = $tree->indexInParent)                                             # Merge with left node
    {my $l = $tree->up->node->[$i-1];                                            # Left node
@@ -463,31 +453,38 @@ sub depth($)                                                                    
   confess "Should not happen";
  }
 
-sub deleteElement($$)                                                           #P Delete an element in a node
+sub deleteLeafKey($$)                                                           #P Delete a (key, pair) in a leaf
+ {my ($tree, $i) = @_;                                                          # Tree, index to delete at
+  @_ == 2 or confess;
+  confess "Not a leaf" unless $tree->leaf;
+  my $key = $tree->keys->[$i];
+  mergeOrFill($tree) if $tree->up;                                              # Merge and fill unless we are on the root and the root is a leaf
+  for my $j(keys $tree->keys->@*)
+   {if ($tree->keys->[$j] == $key)
+     {splice $tree->keys->@*, $j, 1;                                            # Remove keys
+      splice $tree->data->@*, $j, 1;                                            # Remove data
+      last;
+     }
+   }
+ }
+
+sub deleteKey($$)                                                               #P Delete a (key, data) pair in a node
  {my ($tree, $i) = @_;                                                          # Tree, index to delete at
   @_ == 2 or confess;
   if ($tree->leaf)                                                              # Delete from a leaf
-   {my $key = $tree->keys->[$i];
-    $tree->mergeOrFill if $tree->up;                                            # Merge and fill unless we are on the root and the root is a leaf
-    for my $j(keys $tree->keys->@*)
-     {if ($tree->keys->[$j] == $key)
-       {splice $tree->keys->@*, $j, 1;                                          # Remove keys
-        splice $tree->data->@*, $j, 1;                                          # Remove data
-        last;
-       }
-     }
+   {deleteLeafKey($tree, $i);
    }
   elsif ($i > 0)                                                                # Delete from a node
    {my $l = $tree->node->[$i]->rightMost;                                       # Find previous node
     splice  $tree->keys->@*, $i, 1, $l->keys->[-1];
     splice  $tree->data->@*, $i, 1, $l->data->[-1];
-    $l->deleteElement(-1 + scalar $l->keys->@*);                                # Remove leaf
+    $l->deleteLeafKey(-1 + scalar $l->keys->@*);                                # Remove leaf key
    }
   else                                                                          # Delete from a node
    {my $r = $tree->node->[1]->leftMost;                                         # Find previous node
     splice  $tree->keys->@*,  0, 1, $r->keys->[0];
     splice  $tree->data->@*,  0, 1, $r->data->[0];
-    $r->deleteElement(0);                                                       # Remove leaf
+    $r->deleteLeafKey(0);                                                       # Remove leaf key
    }
  }
 
@@ -512,7 +509,7 @@ sub delete($$)                                                                  
     for my $i(keys @k)                                                          # Search the keys in this node
      {my  $s = $key <=> $k[$i];                                                 # Compare key
       if ($s == 0)                                                              # Delete found key
-       {deleteElement($tree, $i);                                               # Delete
+       {deleteKey($tree, $i);                                                   # Delete
         return;                                                                 # New tree
        }
       if ($s < 0)                                                               # Less than current key
