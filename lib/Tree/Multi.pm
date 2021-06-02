@@ -246,15 +246,13 @@ sub findAndSplit($$)                                                            
     confess unless my @k = $tree->keys->@*;                                     # We should have at least one key in the tree because we do a special case insert for an empty tree
 
     if ($key < $k[0])                                                           # Less than smallest key in node
-     {my $n = $tree->node->[0];
-      return (-1, $tree, 0) unless $n;
+     {return (-1, $tree, 0)    unless my $n = $tree->node->[0];
       $tree = $n;
       next;
      }
 
     if ($key > $k[-1])                                                          # Greater than largest key in node
-     {my $n = $tree->node->[-1];
-      return (+1, $tree, $#k) unless $n;
+     {return (+1, $tree, $#k)  unless my $n = $tree->node->[-1];
       $tree = $n;
       next;
      }
@@ -263,8 +261,7 @@ sub findAndSplit($$)                                                            
      {my $s = $key <=> $k[$i];                                                  # Compare key
       return (0, $tree, $i) if $s == 0;                                         # Found key
       if ($s < 0)                                                               # Less than current key
-       {my $n = $tree->node->[$i];                                              # Step through if possible
-        return (-1, $tree, $i) unless $n;                                       # Leaf
+       {return (-1, $tree, $i) unless my $n = $tree->node->[$i];                # Step through if possible
         $tree = $n;                                                             # Step
         last;
        }
@@ -283,15 +280,13 @@ sub find($$)                                                                    
    {return undef unless my @k = $tree->keys->@*;                                # Empty node
 
     if ($key < $k[0])                                                           # Less than smallest key in node
-     {my $n = $tree->node->[0];
-      return undef unless $n;
+     {return undef unless my $n = $tree->node->[0];
       $tree = $n;
       next;
      }
 
     if ($key > $k[-1])                                                          # Greater than largest key in node
-     {my $n = $tree->node->[-1];
-      return undef unless $n;
+     {return undef unless my $n = $tree->node->[-1];
       $tree = $n;
       next;
      }
@@ -300,8 +295,7 @@ sub find($$)                                                                    
      {my $s = $key <=> $k[$i];                                                  # Compare key
       return $tree->data->[$i] if $s == 0;                                      # Found key
       if ($s < 0)                                                               # Less than current key
-       {my $n = $tree->node->[$i];
-        return undef unless $n;
+       {return undef unless my $n = $tree->node->[$i];
         $tree = $n;
         last;
        }
@@ -503,33 +497,40 @@ sub deleteElement($$)                                                           
  }
 
 sub delete($$)                                                                  # Find a key in a tree, delete it, return the new tree
- {my ($tree, $key) = @_;                                                        # Tree, key
+ {my ($root, $key) = @_;                                                        # Tree root, key
   @_ == 2 or confess;
-  my @k = $tree->keys->@*;
 
-  if (@k == 1 and !$k[0] == $key and $tree->up and $tree->node->@* == 0)        # Delete the root node
-   {return new;
-   }
+  my $tree = $root;
+  for (0..999)
+   {my @k = $tree->keys->@*;
 
-  if ($key < $k[0])                                                             # Less than smallest key in node
-   {my $n = $tree->node->[0];
-    return $n ? __SUB__->($n, $key) : $tree->root;
-   }
-
-  if ($key > $k[-1])                                                            # Greater than largest key in node
-   {my $n = $tree->node->[-1];
-    return $n ? __SUB__->($n, $key) : $tree->root;
-   }
-
-  for my $i(keys @k)                                                            # Search the keys in this node
-   {my  $s = $key <=> $k[$i];                                                   # Compare key
-    if ($s == 0)                                                                # Delete found key
-     {deleteElement($tree, $i);                                                 # Delete
-      return $tree->root;                                                       # New tree
+    if (@k == 1 and !$k[0] == $key and $tree->up and $tree->node->@* == 0)      # Delete the root node
+     {return new;
      }
-    if ($s < 0)                                                                 # Less than current key
-     {my $n = $tree->node->[$i];
-      return $n ? __SUB__->($n, $key) : $tree->root;
+
+    if ($key < $k[0])                                                           # Less than smallest key in node
+     {return $tree->root unless my $n = $tree->node->[0];
+      $tree = $n;
+      next;
+     }
+
+    if ($key > $k[-1])                                                          # Greater than largest key in node
+     {return $tree->root unless my $n = $tree->node->[-1];
+      $tree = $n;
+      next;
+     }
+
+    for my $i(keys @k)                                                          # Search the keys in this node
+     {my  $s = $key <=> $k[$i];                                                 # Compare key
+      if ($s == 0)                                                              # Delete found key
+       {deleteElement($tree, $i);                                               # Delete
+        return $tree->root;                                                     # New tree
+       }
+      if ($s < 0)                                                               # Less than current key
+       {return $tree->root unless my $n = $tree->node->[$i];
+        $tree = $n;
+        last;
+       }
      }
    }
 
