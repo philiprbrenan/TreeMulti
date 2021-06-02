@@ -436,8 +436,10 @@ sub height($)                                                                   
  {my ($tree) = @_;                                                              # Tree
   my $n = 0;
   for(1..999)                                                                   # Step down through tree
-   {return $n + 1 if $tree->leaf && $tree->up;                                  # We are on a leaf
-    return $n if $tree->leaf;                                                   # We are on the root and it is a leaf
+   {if ($tree->leaf)                                                            # We are on a leaf
+     {return $n + 1 if $tree->leaf && $tree->keys->@*;                          # We are in a partially full leaf
+      return $n;                                                                # We are on the root and it is empty
+     }
     ++$n;
     $tree = $tree->node->[0];
    }
@@ -2144,15 +2146,10 @@ if (1) {                                                                        
   local $Tree::Multi::numberOfKeysPerNode = 3;                                  # Number of keys per node - can be even
   my $t = new;
   ok $t->height == 0;
-  $t = $t->insert(1, 1);
-  ok $t->height == 0;
-  $t = $t->insert(2, 2);
-  ok $t->height == 0;
-  $t = $t->insert(3, 3);
-  ok $t->height == 0;
-  $t = $t->insert(4, 4);
-say STDERR dump($t);
-  ok $t->height == 1;
+  $t = $t->insert(1, 1); ok $t->height == 1;
+  $t = $t->insert(2, 2); ok $t->height == 1;
+  $t = $t->insert(3, 3); ok $t->height == 1;
+  $t = $t->insert(4, 4); ok $t->height == 2;
  }
 
 if (1) {                                                                        # Synopsis #Tnew #Tinsert #Tfind #Tdelete #Theight #Tprint
@@ -2187,5 +2184,5 @@ END
   ok !$t->find (16);                                                            # Key no longer present
  }
 
-ok 1 for 1..8;
+ok 1 for 1..3;
 lll "Success:", time - $start;
