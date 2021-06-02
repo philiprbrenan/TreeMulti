@@ -445,7 +445,7 @@ sub leftMost($)                                                                 
 
 sub rightMost($)                                                                # Return the right most node below the specified one
  {my ($tree) = @_;                                                              # Tree
-  for(1..999)                                                                   # Step down through tree
+  for(0..999)                                                                   # Step down through tree
    {return $tree if $tree->leaf;                                                # We are on a leaf so we have arrived at the left most node
     $tree = $tree->node->[-1]->rightMost;                                       # Go right
    }
@@ -454,14 +454,22 @@ sub rightMost($)                                                                
 
 sub height($)                                                                   # Return the height of the tree
  {my ($tree) = @_;                                                              # Tree
-  my $n = 0;
-  for(1..999)                                                                   # Step down through tree
+  for my $n(0..999)                                                             # Step down through tree
    {if ($tree->leaf)                                                            # We are on a leaf
      {return $n + 1 if $tree->leaf && $tree->keys->@*;                          # We are in a partially full leaf
       return $n;                                                                # We are on the root and it is empty
      }
-    ++$n;
     $tree = $tree->node->[0];
+   }
+  confess "Should not happen";
+ }
+
+sub depth($)                                                                    # Return the depth of a node within a tree
+ {my ($tree) = @_;                                                              # Tree
+  return 0 if !$tree->up and !$tree->keys->@*;                                  # We are at the root and it is empty
+  for my $n(1..999)                                                             # Step down through tree
+   {return $n  unless $tree->up;                                                # We are at the root
+    $tree = $tree->up;
    }
   confess "Should not happen";
  }
@@ -614,7 +622,7 @@ sub Tree::Multi::Iterator::next($)                                              
            : ($i < $C->node->@* ? &$new($C->node->[$i]->leftMost) : &$up)       # Node
  }
 
-sub print($;$)                                                              # Print the keys in a tree optionally marking the active key
+sub print($;$)                                                                  # Print the keys in a tree optionally marking the active key
  {my ($tree, $i) = @_;                                                          # Tree, optional index of active key
   confess unless $tree;
   my @s;                                                                        # Print
@@ -2162,14 +2170,13 @@ if (1) {                                                                        
   ok disorderedCheck($t, 4, 256);
  }
 
-if (1) {                                                                        #Theight
+if (1) {                                                                        #Theight #Tdepth
   local $Tree::Multi::numberOfKeysPerNode = 3;
-  my $t = new;
-  ok $t->height == 0;
-  $t = $t->insert(1, 1); ok $t->height == 1;
-  $t = $t->insert(2, 2); ok $t->height == 1;
-  $t = $t->insert(3, 3); ok $t->height == 1;
-  $t = $t->insert(4, 4); ok $t->height == 2;
+  my $t = new;           ok $t->height == 0;    ok $t->leftMost->depth == 0;
+  $t = $t->insert(1, 1); ok $t->height == 1;    ok $t->leftMost->depth == 1;
+  $t = $t->insert(2, 2); ok $t->height == 1;    ok $t->leftMost->depth == 1;
+  $t = $t->insert(3, 3); ok $t->height == 1;    ok $t->leftMost->depth == 1;
+  $t = $t->insert(4, 4); ok $t->height == 2;    ok $t->leftMost->depth == 2;
  }
 
 if (1) {                                                                        # Synopsis #Tnew #Tinsert #Tfind #Tdelete #Theight #Tprint
