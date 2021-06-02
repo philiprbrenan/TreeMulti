@@ -5,7 +5,7 @@ use Module::Build;
 my $b = Module::Build->new
  (module_name   => 'Tree::Multi',
   dist_author   => 'philiprbrenan@gmail.com',
-  dist_abstract => 'Multi-way tree in Pure Perl',
+  dist_abstract => 'Multi-way tree in Pure Perl with an even or odd number of keys per node.',
   license       => 'perl',
   requires      =>
    {'Carp'                =>0,
