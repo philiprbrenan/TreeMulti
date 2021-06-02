@@ -622,6 +622,20 @@ sub Tree::Multi::Iterator::next($)                                              
            : ($i < $C->node->@* ? &$new($C->node->[$i]->leftMost) : &$up)       # Node
  }
 
+sub printFlat($;$)                                                              #P Print the keys in a tree optionally marking the active key. The print
+ {my ($tree, $index) = @_;                                                      # Tree, optional index of active key
+  confess unless $tree;
+  my @s;                                                                        # Print
+
+  for(my $i = iterator($tree->root); $i->more; $i->next)                        # Traverse tree
+   {my $t  = ('  'x$i->node->depth).$i->key;                                    # Print keys starring the active key if known
+    $t .= '<=' if defined($index) and $index == $i->pos and $i->node == $tree;
+    push @s, $t;
+   }
+
+  join "\n", @s, ''
+ }
+
 sub print($;$)                                                                  # Print the keys in a tree optionally marking the active key
  {my ($tree, $i) = @_;                                                          # Tree, optional index of active key
   confess unless $tree;
