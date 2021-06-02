@@ -384,6 +384,8 @@ sub mergeOrFill($)                                                              
   return  unless $tree->halfFull;                                               # No need to merge of if not a half node
   confess unless my $p = $tree->up;                                             # Parent exists
 
+  __SUB__->($p) if $p->up;                                                      # Parent is half node so can be merged or filled first
+
   if (!$p->up and $p->keys->@* == 1 and $p->node->[0]->halfFull                 # Parent is the root and it only has one key - merge into the child
                                     and $p->node->[1]->halfFull)
    {my $l = $p->node->[0];                                                      # Merge the root node
@@ -396,8 +398,6 @@ sub mergeOrFill($)                                                              
 
     return;
    }
-
-  __SUB__->($p) if $p->up and $p->halfFull;                                     # Parent is half node so can be merged or filled first
 
   if (my $i = $tree->indexInParent)                                             # Merge with left node
    {my $l = $tree->up->node->[$i-1];                                            # Left node
@@ -478,13 +478,13 @@ sub deleteKey($$)                                                               
    {my $l = $tree->node->[$i]->rightMost;                                       # Find previous node
     splice  $tree->keys->@*, $i, 1, $l->keys->[-1];
     splice  $tree->data->@*, $i, 1, $l->data->[-1];
-    $l->deleteLeafKey(-1 + scalar $l->keys->@*);                                # Remove leaf key
+    deleteLeafKey($l, -1 + scalar $l->keys->@*);                                # Remove leaf key
    }
   else                                                                          # Delete from a node
    {my $r = $tree->node->[1]->leftMost;                                         # Find previous node
     splice  $tree->keys->@*,  0, 1, $r->keys->[0];
     splice  $tree->data->@*,  0, 1, $r->data->[0];
-    $r->deleteLeafKey(0);                                                       # Remove leaf key
+    deleteLeafKey($r, 0);                                                       # Remove leaf key
    }
  }
 
