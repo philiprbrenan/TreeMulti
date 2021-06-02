@@ -113,7 +113,7 @@ sub separateNode($)                                                             
   if (@n == 1)                                                                  # Even keys per node
    {push @l, shift @n;
    }
-  @l > 0 or confess "Left"; @r > 0 or confess "Right"; @n == 0 or confess "Node";
+  @l > 0 or confess "Left"; @r > 0 or confess "Right"; @n==0 or confess "Node";
 
   (\@l, \@r);
  }
@@ -149,7 +149,7 @@ sub splitNode($)                                                                
      {splice $p->keys->@*, $i, 0, $k;
       splice $p->data->@*, $i, 0, $d;
       splice $p->node->@*, $i, 1, $l, $r;
-      return $p;                                                                # Return parent as we have delete the original node
+      return;
      }
    }
   confess;
@@ -166,7 +166,7 @@ sub splitRootNode($)                                                            
   my ($dl, $d, $dr) = separateData $node;
   my ($cl, $cr)     = separateNode $node;
 
-  my $p = new;
+  my $p = $node;
   my ($l, $r)     = (new, new);
   $l->up = $r->up = $p;
   $l->keys = $kl; $l->data = $dl; $l->node = $cl; reUp($l, @$cl);
@@ -175,10 +175,9 @@ sub splitRootNode($)                                                            
   $p->keys = [$k];
   $p->data = [$d];
   $p->node = [$l, $r];
-  $p                                                                            # Return new root
  }
 
-sub splitFullNode($)                                                            #P Split a full node and return the new parent or return the existing node if it does not need to be split
+sub splitFullNode($)                                                            #P Split a full node
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
   return $node  unless $node->node->@* == maximumNumberOfNodes;                 # Check size
@@ -207,7 +206,7 @@ sub splitLeafNode($)                                                            
      {splice $p->keys->@*, $i, 0, $k;
       splice $p->data->@*, $i, 0, $d;
       splice $p->node->@*, $i, 1, $l, $r;
-      return $p;                                                                # Return parent as we have delete the original node
+      return;                                                                   # Return parent as we have delete the original node
      }
    }
   confess;
@@ -223,7 +222,7 @@ sub splitRootLeafNode($)                                                        
   my ($kl, $k, $kr) = separateKeys $node;
   my ($dl, $d, $dr) = separateData $node;
 
-  my ($p, $l, $r) = (new, new, new);                                            # New root and children
+  my ($p, $l, $r) = ($node, new, new);                                          # New root and children
 
   $l->up   = $r->up        = $p;                                                # Initialize children
   $l->keys = $kl; $l->data = $dl;
@@ -232,7 +231,6 @@ sub splitRootLeafNode($)                                                        
   $p->keys = [$k];                                                              # Initialize parent
   $p->data = [$d];
   $p->node = [$l, $r];
-  $p                                                                            # Return new root
  }
 
 sub findAndSplit($$)                                                            #P Find a key in a tree splitting full nodes along the path to the key
@@ -241,8 +239,8 @@ sub findAndSplit($$)                                                            
 
   my $tree = $root;                                                             # Start at the root
 
-  for(1..99)                                                                    # Step down through the tree
-   {$tree = splitFullNode $tree;                                                # Split any full nodes encountered
+  for(0..999)                                                                   # Step down through the tree
+   {splitFullNode $tree;                                                # Split any full nodes encountered
     confess unless my @k = $tree->keys->@*;                                     # We should have at least one key in the tree because we do a special case insert for an empty tree
 
     if ($key < $k[0])                                                           # Less than smallest key in node
@@ -276,7 +274,7 @@ sub find($$)                                                                    
 
   my $tree = $root;                                                             # Start at the root
 
-  for(1..99)                                                                    # Step down through the tree
+  for(0..999)                                                                   # Step down through the tree
    {return undef unless my @k = $tree->keys->@*;                                # Empty node
 
     if ($key < $k[0])                                                           # Less than smallest key in node
@@ -430,7 +428,7 @@ sub mergeOrFill($)                                                              
 
 sub leftMost($)                                                                 # Return the left most node below the specified one
  {my ($tree) = @_;                                                              # Tree
-  for(1..999)                                                                   # Step down through tree
+  for(0..999)                                                                   # Step down through tree
    {return $tree if $tree->leaf;                                                # We are on a leaf so we have arrived at the left most node
     $tree = $tree->node->[0]->leftMost;                                         # Go left
    }
@@ -541,6 +539,8 @@ sub insert($$$)                                                                 
  {my ($tree, $key, $data) = @_;                                                 # Tree, key, data
   @_ == 3 or confess;
 
+  $tree or confess;
+
   if (!$tree->keys->@*)                                                         # Empty tree
    {push $tree->keys->@*, $key;
     push $tree->data->@*, $data;
@@ -551,7 +551,7 @@ sub insert($$$)                                                                 
 
   if ($compare == 0)                                                            # Found an equal key whose data we can update
    {$node->data->[$index] = $data;
-    return root $node;
+    return $tree;
    }
 
   my @k = $node->keys->@*; my @d = $node->data->@*;
@@ -567,9 +567,12 @@ sub insert($$$)                                                                 
     $node->data = [@d[0..$index], $data, @d[$index+1..$#d]];
    }
 
-  return root $node if $node->keys->@* <= maximumNumberOfKeys;                  # No need to split
-  return root splitLeafNode     $node if $node->up;                             # Split leaf node that is not the root
-  return      splitRootLeafNode $node                                           # Split Root node
+  return $tree if $node->keys->@* <= maximumNumberOfKeys;                       # No need to split
+  if ($node->up)                                                                # Split leaf node that is not the root
+   {splitLeafNode $node;
+    return;
+   }
+  splitRootLeafNode $node                                                       # Split Root node
  }
 
 sub iterator($)                                                                 # Make an iterator for a tree
@@ -1583,7 +1586,7 @@ if (1) {
 
   my $t = new; my $N = 256;
 
-  $t = insert($t, $_, 2 * $_) for 1..$N;
+  $t->insert($_, 2 * $_) for 1..$N;
 
   is_deeply $t->print, <<END;
  72 144
@@ -1635,7 +1638,7 @@ if (1) {
 
   my $t = new; my $N = 256;
 
-  $t = insert($t, $_, 2 * $_) for reverse map{scalar reverse} 1..$N;
+  $t->insert($_, 2 * $_) for reverse map{scalar reverse} 1..$N;
 
   is_deeply $t->print, <<END;
  371
@@ -1679,7 +1682,7 @@ if (1) {
 
   my $t = new; my $N = 16;
 
-  $t = insert($t, $_, 2 * $_) for 1..$N;
+  $t->insert($_, 2 * $_) for 1..$N;
 
   ok T($t, <<END);
  6
@@ -1826,7 +1829,7 @@ if (1) {
 
   my $t = new; my $N = 5;
 
-  $t = insert($t, $_, 2 * $_) for 1..$N;
+  $t->insert($_, 2 * $_) for 1..$N;
 
   ok T($t, <<END);
  3
@@ -1861,7 +1864,7 @@ if (1) {
 
   my $t = new; my $N = 15;
 
-  $t = insert($t, $_, 2 * $_) for 1..$N;
+  $t->insert($_, 2 * $_) for 1..$N;
 
   ok T($t, <<END);
  6
@@ -1961,7 +1964,7 @@ if (1) {
 
   my $t = new; my $N = 15;
 
-  $t = insert($t, $_, 2 * $_) for 1..$N;
+  $t->insert($_, 2 * $_) for 1..$N;
 
   ok T($t, <<END);
  6
@@ -2088,7 +2091,7 @@ sub disordered($$)                                                              
 
   my $t = new;
   my @t = map{$_ = scalar reverse $_; s/\A0+//r} 1..$N;
-     $t = insert($t, $_, 2 * $_) for @t;
+     $t->insert($_, 2 * $_) for @t;
      $t                                                                         # Tree built from disordered insertions
  }
 
@@ -2116,7 +2119,7 @@ if (1) {                                                                        
   local $numberOfKeysPerNode = 3; my $N = 256; my $e = 0;  my $t = new;
 
   for my $n(0..$N)
-   {$t = insert($t, $n, $n);
+   {$t->insert($n, $n);
     my @n; for(my $i = $t->iterator; $i->more; $i->next) {push @n, $i->key}
     ++$e unless dump(\@n) eq dump [0..$n];
    }
@@ -2128,7 +2131,7 @@ if (1) {                                                                        
   local $numberOfKeysPerNode = 3; my $N = 13; my $t = new;
 
   for my $n(1..$N)
-   {$t = insert($t, $n, $n);
+   {$t->insert($n, $n);
    }
 
   is_deeply $t->leftMost ->keys, [1, 2];
@@ -2187,18 +2190,18 @@ if (1) {                                                                        
 
 if (1) {                                                                        #Theight #Tdepth
   local $Tree::Multi::numberOfKeysPerNode = 3;
-  my $t = new;           ok $t->height == 0;    ok $t->leftMost->depth == 0;
-  $t = $t->insert(1, 1); ok $t->height == 1;    ok $t->leftMost->depth == 1;
-  $t = $t->insert(2, 2); ok $t->height == 1;    ok $t->leftMost->depth == 1;
-  $t = $t->insert(3, 3); ok $t->height == 1;    ok $t->leftMost->depth == 1;
-  $t = $t->insert(4, 4); ok $t->height == 2;    ok $t->leftMost->depth == 2;
+  my $t = new;      ok $t->height == 0;    ok $t->leftMost->depth == 0;
+  $t->insert(1, 1); ok $t->height == 1;    ok $t->leftMost->depth == 1;
+  $t->insert(2, 2); ok $t->height == 1;    ok $t->leftMost->depth == 1;
+  $t->insert(3, 3); ok $t->height == 1;    ok $t->leftMost->depth == 1;
+  $t->insert(4, 4); ok $t->height == 2;    ok $t->leftMost->depth == 2;
  }
 
 if (1) {                                                                        # Synopsis #Tnew #Tinsert #Tfind #Tdelete #Theight #Tprint
   local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
 
   my $t = Tree::Multi::new;                                                     # Construct tree
-     $t = $t->insert($_, 2 * $_) for reverse 1..32;                             # Load tree in reverse
+     $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse
 
   is_deeply $t->print, <<END;
  15 21 27
