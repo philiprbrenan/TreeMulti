@@ -1622,7 +1622,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 153;
+ {plan tests => 154;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -2309,6 +2309,116 @@ END
   ok  $t->find  (16) == 32;                                                     # Find by key
       $t->delete(16);                                                           # Delete a key
   ok !$t->find (16);                                                            # Key no longer present
+ }
+
+if (1) {                                                                        #Titerator #TTree::Multi::Iterator::next  #TTree::Multi::Iterator::more
+  my $k = 3;  my $n = 18;
+  my $t = disordered  $k, $n;
+  my @s;
+  push @s, $t->flat("Start");
+  for my $k(31, 61, 6, 5, 21, 4, 3, 2, 7, 8, 11, 41, 71, 51, 81, 9, 1)
+   {$t->delete($k);
+    push @s, $t->flat("After deleting $k");
+   }
+
+  my $s = join "\n", @s;
+  owf $logFile, $s if $develop;
+  is_deeply $s, <<END;
+Start
+
+                       6                         31
+           3                       9                            61
+   1   2       4   5       7   8       11   21        41   51        71   81
+
+After deleting 31
+
+                       6                    21
+           3                       9                       61
+   1   2       4   5       7   8       11        41   51        71   81
+
+After deleting 61
+
+                       6                    21
+           3                       9                       71
+   1   2       4   5       7   8       11        41   51        81
+
+After deleting 6
+
+                       7                21
+           3                   9                       71
+   1   2       4   5       8       11        41   51        81
+
+After deleting 5
+
+                   7                21
+           3               9                       71
+   1   2       4       8       11        41   51        81
+
+After deleting 21
+
+                               11
+           3       7                          71
+   1   2       4       8   9        41   51        81
+
+After deleting 4
+
+                           11
+       2       7                          71
+   1       3       8   9        41   51        81
+
+After deleting 3
+
+                       11
+           7                          71
+   1   2       8   9        41   51        81
+
+After deleting 2
+
+                   11
+       7                          71
+   1       8   9        41   51        81
+
+After deleting 7
+
+               11
+       8                      71
+   1       9        41   51        81
+
+After deleting 8
+
+           11             71
+   1   9        41   51        81
+
+After deleting 11
+
+           41        71
+   1   9        51        81
+
+After deleting 41
+
+       9        71
+   1       51        81
+
+After deleting 71
+
+           51
+   1   9        81
+
+After deleting 51
+
+       9
+   1       81
+
+After deleting 81
+
+   1   9
+
+After deleting 9
+
+   1
+
+After deleting 1
+END
  }
 
 if (!$develop) {
