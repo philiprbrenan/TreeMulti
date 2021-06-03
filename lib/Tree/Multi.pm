@@ -52,6 +52,12 @@ sub full($)                                                                     
   $tree->keys->@* == maximumNumberOfKeys
  }
 
+sub count($)                                                                    #P Count of keys in a node
+ {my ($tree) = @_;                                                              # Tree
+  @_ == 1 or confess;
+  scalar $tree->keys->@*
+ }
+
 sub valid($)                                                                    #P Confirm that a tree is valid
  {my ($tree) = @_;                                                              # Tree
   my $root = $tree->root;
@@ -415,15 +421,13 @@ $tree->valid;
    }
   else                                                                          # Merge with left hand sibling
    {
-lll "Merge with left hand sibling ", dump($tree->root);
-lll "AT node i=$i ", dump($tree->keys);
 $tree->valid;
     my $l = $p->node->[$i-1];                                                   # Node on left
     unshift $tree->keys->@*, $l->keys->@*, splice $p->keys->@*, $i-1, 1;        # Transfer keys
     unshift $tree->data->@*, $l->data->@*, splice $p->data->@*, $i-1, 1;        # Transfer data
     if (!$tree->leaf)                                                           # Children of merged node
      {unshift $tree->node->@*, $l->node->@*;                                    # Children of merged node
-      $_->up = $tree for $l->node->@*;                                          # Update parent of children of left node
+      reUp($tree, $l->node->@*);                                                # Update parent of children of left node
      }
     splice $p->node->@*, $i-1, 1;                                               # Remove link from parent to left child
 $tree->valid;
@@ -550,29 +554,33 @@ sub rightMostSplitting($)                                                       
   confess "Should not happen";
  }
 
-sub deleteLeafKey($$)                                                           #P Delete a (key, pair) in a leaf
- {my ($tree, $i) = @_;                                                          # Tree, index to delete at
+sub deleteLeafKey($$)                                                           #P Delete a key in a leaf
+ {my ($tree, $key) = @_;                                                        # Tree, key to delete
   @_ == 2 or confess;
   confess "Not a leaf" unless $tree->leaf;
-  my $key = $tree->keys->[$i];
   mergeOrFill($tree) if $tree->up;                                              # Merge and fill unless we are on the root and the root is a leaf
-  for my $j(keys $tree->keys->@*)    # Stablization can be removed now we are no longer recursive
-   {if ($tree->keys->[$j] == $key)
-     {splice $tree->keys->@*, $j, 1;                                            # Remove keys
-      splice $tree->data->@*, $j, 1;                                            # Remove data
+  for my $i(keys $tree->keys->@*)
+   {if ($tree->keys->[$i] == $key)
+     {splice $tree->keys->@*, $i, 1;                                            # Remove keys
+      splice $tree->data->@*, $i, 1;                                            # Remove data
       last;
      }
    }
  }
 
-sub deleteKey($$$)                                                              #P Delete a (key, data) pair in a node that is not half full
+sub deleteKey($$$)                                                              #P Delete a (key, data) pair
  {my ($tree, $i, $key) = @_;                                                    # Tree, index to delete at
   @_ == 3 or confess;
 $tree->valid;
 
   if ($tree->leaf)                                                              # Delete from a leaf
-   {deleteLeafKey($tree, $i);
+   {if ($tree->count == 1)
+      {$tree->mergeOrFill;
+      }
+    if ($tree->count > 1)
+     {deleteLeafKey($tree, $key);
 $tree->valid;
+     }
    }
   elsif ($i != $tree->keys->@* - 1)                                             # Go right if possible to avoid repositioning the key to be deleted
    {        $tree->node->[$i+1]->mergeOrFillRight;                              # Merge or fill using keys to the right of the one to be deleted
@@ -595,45 +603,10 @@ $tree->valid;
 sub delete($$)                                                                  # Find a key in a tree, delete it, return the new tree
  {my ($root, $key) = @_;                                                        # Tree root, key
   @_ == 2 or confess;
-lll "Delete key $key ", dump($root->keys);
-$root->valid;
-  if ($root->leaf)                                                              # Delete immediately if the root is a leaf
-   {my @k = $root->keys->@*;
-    for my $i(keys @k)                                                          # Search the keys in this node
-     {if ($root->keys->[$i] == $key)
-       {splice $root->keys->@*, $i, 1;                                          # Remove keys
-        splice $root->data->@*, $i, 1;                                          # Remove data
-        return;
-       }
-     }
-   }
-$root->valid;
-
-# if ($root->keys->@* == 1 and $root->keys->[0] == $key)                        # To delete we need every parent node to have at least two keys.  If the root has only one key in it and that happens to be the key we want to delete then we must either fill to move the single root key into one of the left or right sub trees or if taht is not possible because they are both full, then split the right sub tree so that the root has at least two elements allowing us to proceed with a normal delete
-  if ($root->keys->@* == 1)                                                     # To delete we need every parent node to have at least two keys.  If the root has only one key in it and that happens to be the key we want to delete then we must either fill to move the single root key into one of the left or right sub trees or if taht is not possible because they are both full, then split the right sub tree so that the root has at least two elements allowing us to proceed with a normal delete
-   {my ($l, $r) = $root->node->@*;
-    if ($l->full and $r->full)                                                  # Both children full - split right to move another key into the root to give it at least two keys
-     {$r->splitNode;
-$root->valid;
-     }
-    elsif ($l->keys->@* >= $r->keys->@*)                                        # Left has more than right so fill right from left
-     {$r->fillFromLeft;
-$root->valid;
-     }
-    else                                                                        # Right has more than left so fill left from right
-     {$l->fillFromRight;
-$root->valid;
-     }
-   }
-$root->valid;
 
   my $tree = $root;                                                             # Find key in tree starting from root
   for (0..999)
-   {
-$root->valid;
-     mergeOrFill $tree if $tree->up;
-$root->valid;
-    my @k = $tree->keys->@*;
+   {my @k = $tree->keys->@*;
 
     if ($key < $k[0])                                                           # Less than smallest key in node
      {return unless $tree = $tree->node->[0];
@@ -648,8 +621,7 @@ $root->valid;
     for my $i(keys @k)                                                          # Search the keys in this node
      {my  $s = $key <=> $k[$i];                                                 # Compare key
       if ($s == 0)                                                              # Delete found key
-       {$root->valid;
-        deleteKey($tree, $i, $key);                                             # Delete
+       {deleteKey($tree, $i, $key);                                             # Delete
         return;                                                                 # New tree
        }
       if ($s < 0)                                                               # Less than current key
@@ -754,18 +726,35 @@ sub Tree::Multi::Iterator::next($)                                              
            : ($i < $C->node->@* ? &$new($C->node->[$i]->leftMost) : &$up)       # Node
  }
 
-sub printFlat($;$)                                                              #P Print the keys in a tree optionally marking the active key. The print
- {my ($tree, $index) = @_;                                                      # Tree, optional index of active key
+sub flat($@)                                                                    #P Print the keys in a tree in a flat manner
+ {my ($tree, @title) = @_;                                                      # Tree, title
   confess unless $tree;
   my @s;                                                                        # Print
 
   for(my $i = iterator($tree->root); $i->more; $i->next)                        # Traverse tree
    {my $t  = ('  'x$i->node->depth).$i->key;                                    # Print keys starring the active key if known
-    $t .= '<=' if defined($index) and $index == $i->pos and $i->node == $tree;
     push @s, $t;
    }
-
-  join "\n", @s, ''
+  my @t;
+  for   my $i(keys @s)
+   {for my $j(0..length($s[$i])-1)
+     {my $c = $s[$i]; my $l = length($c);
+      if ($j < $l)
+       {my $d = substr($c, $j, 1);
+lll "AAAA", dump($d);
+        $t[$j][$i] = $d;
+       }
+      else
+       {my $d = '';
+        $t[$j][$i] = $d;
+       }
+     }
+   }
+lll "AAAA", dump(\@s);
+lll "AAAA", dump(\@t);
+exit;
+  say STDERR join ' ', @title if @title;
+  join "\n", @t, ''
  }
 
 sub print($;$)                                                                  # Print the keys in a tree optionally marking the active key
@@ -1709,6 +1698,56 @@ sub T($$)                                                                       
 my $start = time;                                                               # Tests
 
 eval {goto latest} if !caller(0) and -e "/home/phil";                           # Go to latest test if specified
+
+if (1)
+ {new();
+   my $tree =  do {
+  my $a = bless({
+    data   => [62],
+    keys   => [31],
+    node   => [
+                bless({
+                  data   => [6, 12, 18],
+                  keys   => [3, 6, 9],
+                  node   => [
+                              bless({ data => [4], keys => [2], node => [], number => 2, up => 'fix' }, "Tree::Multi"),
+                              bless({ data => [8, 10], keys => [4, 5], node => [], number => 4, up => 'fix' }, "Tree::Multi"),
+                              bless({ data => [14, 16], keys => [7, 8], node => [], number => 6, up => 'fix' }, "Tree::Multi"),
+                              bless({ data => [22, 42], keys => [11, 21], node => [], number => 10, up => 'fix' }, "Tree::Multi"),
+                            ],
+                  number => 8,
+                  up     => 'fix',
+                }, "Tree::Multi"),
+                bless({
+                  data   => [122],
+                  keys   => [61],
+                  node   => [
+                              bless({ data => [82, 102], keys => [41, 51], node => [], number => 12, up => 'fix' }, "Tree::Multi"),
+                              bless({ data => [142, 162], keys => [71, 81], node => [], number => 13, up => 'fix' }, "Tree::Multi"),
+                            ],
+                  number => 15,
+                  up     => 'fix',
+                }, "Tree::Multi"),
+              ],
+    number => 1,
+    up     => undef,
+  }, "Tree::Multi");
+  $a->{node}[0]{node}[0]{up} = $a->{node}[0];
+  $a->{node}[0]{node}[1]{up} = $a->{node}[0];
+  $a->{node}[0]{node}[2]{up} = $a->{node}[0];
+  $a->{node}[0]{node}[3]{up} = $a->{node}[0];
+  $a->{node}[0]{up} = $a;
+  $a->{node}[1]{node}[0]{up} = $a->{node}[1];
+  $a->{node}[1]{node}[1]{up} = $a->{node}[1];
+  $a->{node}[1]{up} = $a;
+  $a;
+};
+  for my $k(81, 71, 61)#, 61, 51, 41)
+   {$tree->delete($k);
+    say STDERR $tree->flat("After deleting $k");
+   }
+ }
+confess;
 
 sub disordered($$)                                                              #P Disordered insertions
  {my ($n, $N) = @_;                                                             # Keys per node, Nodes
