@@ -721,7 +721,7 @@ sub print($;$)                                                                  
   join "\n", @s, ''
  }
 
-sub count($)                                                                    # Count the number of keys in a tree
+sub size($)                                                                     # Count the number of keys in a tree
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
   my $n = 0;                                                                    # Print
@@ -932,7 +932,22 @@ B<Example:>
 
         $t->delete(16);                                                           # Delete a key
 
-    ok !$t->find (16);                                                            # Key no longer present  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+    ok !$t->find  (16);                                                           # Key no longer present  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+
+
+
+    ok  $t->find  (17) == 34;                                                     # Find by key  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+    my @k;
+    for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
+     {push @k, $i->key unless $i->key == 17;
+     }
+
+    $t->delete($_) for @k;                                                        # Delete
+
+
+    ok $t->find(17) == 34 && $t->count  == 1;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
 
 
@@ -1069,7 +1084,18 @@ B<Example:>
 
     ok  $t->find  (16) == 32;                                                     # Find by key
         $t->delete(16);                                                           # Delete a key
-    ok !$t->find (16);                                                            # Key no longer present
+    ok !$t->find  (16);                                                           # Key no longer present
+
+
+    ok  $t->find  (17) == 34;                                                     # Find by key
+    my @k;
+    for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
+     {push @k, $i->key unless $i->key == 17;
+     }
+
+    $t->delete($_) for @k;                                                        # Delete
+
+    ok $t->find(17) == 34 && $t->count  == 1;
 
 
 =head2 depth($tree)
@@ -1141,7 +1167,20 @@ B<Example:>
 
         $t->delete(16);                                                           # Delete a key  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-    ok !$t->find (16);                                                            # Key no longer present
+    ok !$t->find  (16);                                                           # Key no longer present
+
+
+    ok  $t->find  (17) == 34;                                                     # Find by key
+    my @k;
+    for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
+     {push @k, $i->key unless $i->key == 17;
+     }
+
+
+    $t->delete($_) for @k;                                                        # Delete  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+
+    ok $t->find(17) == 34 && $t->count  == 1;
 
 
 =head2 insert($tree, $key, $data)
@@ -1186,7 +1225,18 @@ B<Example:>
 
     ok  $t->find  (16) == 32;                                                     # Find by key
         $t->delete(16);                                                           # Delete a key
-    ok !$t->find (16);                                                            # Key no longer present
+    ok !$t->find  (16);                                                           # Key no longer present
+
+
+    ok  $t->find  (17) == 34;                                                     # Find by key
+    my @k;
+    for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
+     {push @k, $i->key unless $i->key == 17;
+     }
+
+    $t->delete($_) for @k;                                                        # Delete
+
+    ok $t->find(17) == 34 && $t->count  == 1;
 
 
 =head2 iterator($tree)
@@ -1211,114 +1261,48 @@ B<Example:>
 
     is_deeply $e, 0;
 
-    my $k = 3;  my $n = 18;
-    my $t = disordered  $k, $n;
-    my @s;
-    push @s, $t->flat("Start");
-    for my $k(31, 61, 6, 5, 21, 4, 3, 2, 7, 8, 11, 41, 71, 51, 81, 9, 1)
-     {$t->delete($k);
-      push @s, $t->flat("After deleting $k");
+    local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
+
+    my $t = Tree::Multi::new;                                                     # Construct tree
+       $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse
+
+    is_deeply $t->print, <<END;
+   15 21 27
+     3 6 9 12
+       1 2
+       4 5
+       7 8
+       10 11
+       13 14
+     18
+       16 17
+       19 20
+     24
+       22 23
+       25 26
+     30
+       28 29
+       31 32
+  END
+
+    ok  $t->height     ==  3;                                                     # Height
+
+    ok  $t->find  (16) == 32;                                                     # Find by key
+        $t->delete(16);                                                           # Delete a key
+    ok !$t->find  (16);                                                           # Key no longer present
+
+
+    ok  $t->find  (17) == 34;                                                     # Find by key
+    my @k;
+
+    for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+     {push @k, $i->key unless $i->key == 17;
      }
 
-    my $s = join "
-", @s;
-    owf $logFile, $s if $develop;
-    is_deeply $s, <<END;
-  Start
+    $t->delete($_) for @k;                                                        # Delete
 
-                         6                         31
-             3                       9                            61
-     1   2       4   5       7   8       11   21        41   51        71   81
-
-  After deleting 31
-
-                         6                    21
-             3                       9                       61
-     1   2       4   5       7   8       11        41   51        71   81
-
-  After deleting 61
-
-                         6                    21
-             3                       9                       71
-     1   2       4   5       7   8       11        41   51        81
-
-  After deleting 6
-
-                         7                21
-             3                   9                       71
-     1   2       4   5       8       11        41   51        81
-
-  After deleting 5
-
-                     7                21
-             3               9                       71
-     1   2       4       8       11        41   51        81
-
-  After deleting 21
-
-                                 11
-             3       7                          71
-     1   2       4       8   9        41   51        81
-
-  After deleting 4
-
-                             11
-         2       7                          71
-     1       3       8   9        41   51        81
-
-  After deleting 3
-
-                         11
-             7                          71
-     1   2       8   9        41   51        81
-
-  After deleting 2
-
-                     11
-         7                          71
-     1       8   9        41   51        81
-
-  After deleting 7
-
-                 11
-         8                      71
-     1       9        41   51        81
-
-  After deleting 8
-
-             11             71
-     1   9        41   51        81
-
-  After deleting 11
-
-             41        71
-     1   9        51        81
-
-  After deleting 41
-
-         9        71
-     1       51        81
-
-  After deleting 71
-
-             51
-     1   9        81
-
-  After deleting 51
-
-         9
-     1       81
-
-  After deleting 81
-
-     1   9
-
-  After deleting 9
-
-     1
-
-  After deleting 1
-  END
+    ok $t->find(17) == 34 && $t->count  == 1;
 
 
 =head2 Tree::Multi::Iterator::next($iter)
@@ -1340,115 +1324,6 @@ B<Example:>
      }
 
     is_deeply $e, 0;
-
-    my $k = 3;  my $n = 18;
-    my $t = disordered  $k, $n;
-    my @s;
-    push @s, $t->flat("Start");
-    for my $k(31, 61, 6, 5, 21, 4, 3, 2, 7, 8, 11, 41, 71, 51, 81, 9, 1)
-     {$t->delete($k);
-      push @s, $t->flat("After deleting $k");
-     }
-
-    my $s = join "
-", @s;
-    owf $logFile, $s if $develop;
-    is_deeply $s, <<END;
-  Start
-
-                         6                         31
-             3                       9                            61
-     1   2       4   5       7   8       11   21        41   51        71   81
-
-  After deleting 31
-
-                         6                    21
-             3                       9                       61
-     1   2       4   5       7   8       11        41   51        71   81
-
-  After deleting 61
-
-                         6                    21
-             3                       9                       71
-     1   2       4   5       7   8       11        41   51        81
-
-  After deleting 6
-
-                         7                21
-             3                   9                       71
-     1   2       4   5       8       11        41   51        81
-
-  After deleting 5
-
-                     7                21
-             3               9                       71
-     1   2       4       8       11        41   51        81
-
-  After deleting 21
-
-                                 11
-             3       7                          71
-     1   2       4       8   9        41   51        81
-
-  After deleting 4
-
-                             11
-         2       7                          71
-     1       3       8   9        41   51        81
-
-  After deleting 3
-
-                         11
-             7                          71
-     1   2       8   9        41   51        81
-
-  After deleting 2
-
-                     11
-         7                          71
-     1       8   9        41   51        81
-
-  After deleting 7
-
-                 11
-         8                      71
-     1       9        41   51        81
-
-  After deleting 8
-
-             11             71
-     1   9        41   51        81
-
-  After deleting 11
-
-             41        71
-     1   9        51        81
-
-  After deleting 41
-
-         9        71
-     1       51        81
-
-  After deleting 71
-
-             51
-     1   9        81
-
-  After deleting 51
-
-         9
-     1       81
-
-  After deleting 81
-
-     1   9
-
-  After deleting 9
-
-     1
-
-  After deleting 1
-  END
 
 
 =head2 reverseIterator($tree)
@@ -1528,8 +1403,26 @@ B<Example:>
 
     ok  $t->find  (16) == 32;                                                     # Find by key
         $t->delete(16);                                                           # Delete a key
-    ok !$t->find (16);                                                            # Key no longer present
+    ok !$t->find  (16);                                                           # Key no longer present
 
+
+    ok  $t->find  (17) == 34;                                                     # Find by key
+    my @k;
+    for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
+     {push @k, $i->key unless $i->key == 17;
+     }
+
+    $t->delete($_) for @k;                                                        # Delete
+
+    ok $t->find(17) == 34 && $t->count  == 1;
+
+
+=head2 count($tree)
+
+Count the number of keys in a tree
+
+     Parameter  Description
+  1  $tree      Tree
 
 
 =head2 Tree::Multi Definition
@@ -1629,7 +1522,18 @@ B<Example:>
 
     ok  $t->find  (16) == 32;                                                     # Find by key
         $t->delete(16);                                                           # Delete a key
-    ok !$t->find (16);                                                            # Key no longer present
+    ok !$t->find  (16);                                                           # Key no longer present
+
+
+    ok  $t->find  (17) == 34;                                                     # Find by key
+    my @k;
+    for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
+     {push @k, $i->key unless $i->key == 17;
+     }
+
+    $t->delete($_) for @k;                                                        # Delete
+
+    ok $t->find(17) == 34 && $t->count  == 1;
 
 
 =head2 minimumNumberOfKeys()
@@ -1797,7 +1701,7 @@ Write a result to the log file
 
 =head2 disordered($n, $N)
 
-Disordered insertions
+Disordered but stable insertions
 
      Parameter  Description
   1  $n         Keys per node
@@ -1812,89 +1716,102 @@ Check disordered insertions
   2  $n         Keys per node
   3  $N         Nodes
 
+=head2 randomCheck($n, $N, $T)
+
+Random insertions
+
+     Parameter  Description
+  1  $n         Keys per node
+  2  $N         Log 10 nodes
+  3  $T         Log 10 number of tests
+
 
 =head1 Index
 
 
-1 L<delete|/delete> - Find a key in a tree, delete it, return the new tree
+1 L<count|/count> - Count the number of keys in a tree
 
-2 L<deleteKey|/deleteKey> - Delete a (key, data) pair in a node
+2 L<delete|/delete> - Find a key in a tree, delete it, return the new tree
 
-3 L<deleteLeafKey|/deleteLeafKey> - Delete a (key, pair) in a leaf
+3 L<deleteKey|/deleteKey> - Delete a (key, data) pair in a node
 
-4 L<depth|/depth> - Return the depth of a node within a tree
+4 L<deleteLeafKey|/deleteLeafKey> - Delete a (key, pair) in a leaf
 
-5 L<disordered|/disordered> - Disordered insertions
+5 L<depth|/depth> - Return the depth of a node within a tree
 
-6 L<disorderedCheck|/disorderedCheck> - Check disordered insertions
+6 L<disordered|/disordered> - Disordered but stable insertions
 
-7 L<fillFromLeftOrRight|/fillFromLeftOrRight> - Fill a node from the specified sibling
+7 L<disorderedCheck|/disorderedCheck> - Check disordered insertions
 
-8 L<find|/find> - Find a key in a tree returning its associated data or undef if the key does not exist
+8 L<fillFromLeftOrRight|/fillFromLeftOrRight> - Fill a node from the specified sibling
 
-9 L<findAndSplit|/findAndSplit> - Find a key in a tree splitting full nodes along the path to the key
+9 L<find|/find> - Find a key in a tree returning its associated data or undef if the key does not exist
 
-10 L<flat|/flat> - Print the keys in a tree in a flat manner
+10 L<findAndSplit|/findAndSplit> - Find a key in a tree splitting full nodes along the path to the key
 
-11 L<full|/full> - Confirm that a node is full.
+11 L<flat|/flat> - Print the keys in a tree in a flat manner
 
-12 L<halfFull|/halfFull> - Confirm that a node is half full.
+12 L<full|/full> - Confirm that a node is full.
 
-13 L<height|/height> - Return the height of the tree
+13 L<halfFull|/halfFull> - Confirm that a node is half full.
 
-14 L<indexInParent|/indexInParent> - Get the index of a node in its parent
+14 L<height|/height> - Return the height of the tree
 
-15 L<insert|/insert> - Insert a key and data into a tree
+15 L<indexInParent|/indexInParent> - Get the index of a node in its parent
 
-16 L<iterator|/iterator> - Make an iterator for a tree
+16 L<insert|/insert> - Insert a key and data into a tree
 
-17 L<leaf|/leaf> - Confirm that the tree is a leaf.
+17 L<iterator|/iterator> - Make an iterator for a tree
 
-18 L<leftMost|/leftMost> - Return the left most node below the specified one
+18 L<leaf|/leaf> - Confirm that the tree is a leaf.
 
-19 L<maximumNumberOfKeys|/maximumNumberOfKeys> - Maximum number of keys per node.
+19 L<leftMost|/leftMost> - Return the left most node below the specified one
 
-20 L<maximumNumberOfNodes|/maximumNumberOfNodes> - Maximum number of children per parent.
+20 L<maximumNumberOfKeys|/maximumNumberOfKeys> - Maximum number of keys per node.
 
-21 L<mergeOrFill|/mergeOrFill> - make a node larger than a half node
+21 L<maximumNumberOfNodes|/maximumNumberOfNodes> - Maximum number of children per parent.
 
-22 L<mergeWithLeftOrRight|/mergeWithLeftOrRight> - Merge two adjacent nodes
+22 L<mergeOrFill|/mergeOrFill> - make a node larger than a half node
 
-23 L<minimumNumberOfKeys|/minimumNumberOfKeys> - Minimum number of keys per node.
+23 L<mergeWithLeftOrRight|/mergeWithLeftOrRight> - Merge two adjacent nodes
 
-24 L<new|/new> - Create a new multi-way tree node.
+24 L<minimumNumberOfKeys|/minimumNumberOfKeys> - Minimum number of keys per node.
 
-25 L<print|/print> - Print the keys in a tree optionally marking the active key
+25 L<new|/new> - Create a new multi-way tree node.
 
-26 L<reUp|/reUp> - Reconnect the children to their new parent
+26 L<print|/print> - Print the keys in a tree optionally marking the active key
 
-27 L<reverseIterator|/reverseIterator> - Create a reverse iterator for a tree
+27 L<randomCheck|/randomCheck> - Random insertions
 
-28 L<rightMost|/rightMost> - Return the right most node below the specified one
+28 L<reUp|/reUp> - Reconnect the children to their new parent
 
-29 L<root|/root> - Return the root node of a tree.
+29 L<reverseIterator|/reverseIterator> - Create a reverse iterator for a tree
 
-30 L<separateData|/separateData> - Return ([lower], center, [upper]) data
+30 L<rightMost|/rightMost> - Return the right most node below the specified one
 
-31 L<separateKeys|/separateKeys> - Return ([lower], center, [upper]) keys.
+31 L<root|/root> - Return the root node of a tree.
 
-32 L<separateNode|/separateNode> - Return ([lower], [upper]) children
+32 L<separateData|/separateData> - Return ([lower], center, [upper]) data
 
-33 L<splitFullNode|/splitFullNode> - Split a full node
+33 L<separateKeys|/separateKeys> - Return ([lower], center, [upper]) keys.
 
-34 L<splitLeafNode|/splitLeafNode> - Split a full leaf node in assuming it has a non full parent
+34 L<separateNode|/separateNode> - Return ([lower], [upper]) children
 
-35 L<splitNode|/splitNode> - Split a full node in half assuming it has a non full parent
+35 L<splitFullNode|/splitFullNode> - Split a full node
 
-36 L<splitRootLeafNode|/splitRootLeafNode> - Split a full root that is also a leaf
+36 L<splitLeafNode|/splitLeafNode> - Split a full leaf node in assuming it has a non full parent
 
-37 L<splitRootNode|/splitRootNode> - Split a full root
+37 L<splitNode|/splitNode> - Split a full node in half assuming it has a non full parent
 
-38 L<T|/T> - Write a result to the log file
+38 L<splitRootLeafNode|/splitRootLeafNode> - Split a full root that is also a leaf
 
-39 L<Tree::Multi::Iterator::next|/Tree::Multi::Iterator::next> - Find the next key
+39 L<splitRootNode|/splitRootNode> - Split a full root
 
-40 L<Tree::Multi::ReverseIterator::prev|/Tree::Multi::ReverseIterator::prev> - Find the previous key
+40 L<T|/T> - Write a result to the log file
+
+41 L<Tree::Multi::Iterator::next|/Tree::Multi::Iterator::next> - Find the next key
+
+42 L<Tree::Multi::ReverseIterator::prev|/Tree::Multi::ReverseIterator::prev> - Find the previous key
 
 =head1 Installation
 
@@ -1917,6 +1834,8 @@ This module is free software. It may be used, redistributed and/or modified
 under the same terms as Perl itself.
 
 =cut
+
+
 
 # Tests and documentation
 
@@ -2619,7 +2538,7 @@ if (1) {                                                                        
   $t->insert(4, 4); ok $t->height == 2;    ok $t->leftMost->depth == 2;
  }
 
-if (1) {                                                                        # Synopsis #Tnew #Tinsert #Tfind #Tdelete #Theight #Tprint #Titerator
+if (1) {                                                                        # Synopsis #Tnew #Tinsert #Tfind #Tdelete #Theight #Tprint #Titerator #Tsize
   local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
 
   my $t = Tree::Multi::new;                                                     # Construct tree
@@ -2659,7 +2578,7 @@ END
 
   $t->delete($_) for @k;                                                        # Delete
 
-  ok $t->find(17) == 34 && $t->count  == 1;
+  ok $t->find(17) == 34 && $t->size == 1;                                       # Size
  }
 
 if (1) {
