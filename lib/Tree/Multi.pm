@@ -2751,7 +2751,7 @@ if (!$develop) {
  }
 else {ok 1}
 
-if (!$develop) {my $t = disordered(4, 1024); ok disorderedCheck($t, 4, 1024)} else {ok 1}
-if (!$develop) {my $t = disordered(3, 1024); ok disorderedCheck($t, 4, 1024)} else {ok 1}
+if (!$develop) {my $t = disordered(4, 2000); ok disorderedCheck($t, 4, 2000)} else {ok 1}
+if (!$develop) {my $t = disordered(3, 2000); ok disorderedCheck($t, 3, 2000)} else {ok 1}
 
 lll "Success:", time - $start;
