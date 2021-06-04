@@ -687,11 +687,11 @@ sub flat($@)                                                                    
       $s[$j] = substr($s.(' 'x999), 0, $l) if length($s) < $l;
      }
    }
-  unshift @s, join(' ', @title) if @title;
-  for my $i(keys @s)
+  for my $i(keys @s)                                                            # Clean up trailing blanks so that tests are not affected by spurious whitespace mismatches
    {$s[$i] =~ s/\s+\n/\n/gs;
     $s[$i] =~ s/\s+\Z//gs;
    }
+  unshift @s, join(' ', @title) if @title;                                      # Add title
   join "\n", @s, '';
  }
 
