@@ -712,15 +712,32 @@ sub print($;$)                                                                  
     push @s, join ' ', @t;                                                      # Details of one node
 
     if (my $nodes = $t->node)                                                   # Each key
-     {for my $n($nodes->@*)                                                     # Each key
-       {__SUB__->($n, $in+1);                                                   # Sub tree
-       }
+     {__SUB__->($_, $in+1) for $nodes->@*;
      }
    };
 
   &$print(root($tree), 0);                                                      # Print tree
 
   join "\n", @s, ''
+ }
+
+sub count($)                                                                    # Count the number of keys in a tree
+ {my ($tree) = @_;                                                              # Tree
+  @_ == 1 or confess;
+  my $n = 0;                                                                    # Print
+
+  my $count = sub                                                               # Print a node
+   {my ($t) = @_;
+    return unless $t and $t->keys and my @k = $t->keys->@*;
+    $n += @k;
+    if (my $nodes = $t->node)                                                   # Each key
+     {__SUB__->($_) for $nodes->@*;
+     }
+   };
+
+  &$count(root $tree);                                                          # Count nodes in tree
+
+  $n;
  }
 
 #d
@@ -1930,7 +1947,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 160;
+ {plan tests => 162;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -2602,7 +2619,7 @@ if (1) {                                                                        
   $t->insert(4, 4); ok $t->height == 2;    ok $t->leftMost->depth == 2;
  }
 
-if (1) {                                                                        # Synopsis #Tnew #Tinsert #Tfind #Tdelete #Theight #Tprint
+if (1) {                                                                        # Synopsis #Tnew #Tinsert #Tfind #Tdelete #Theight #Tprint #Titerator
   local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
 
   my $t = Tree::Multi::new;                                                     # Construct tree
@@ -2631,10 +2648,21 @@ END
 
   ok  $t->find  (16) == 32;                                                     # Find by key
       $t->delete(16);                                                           # Delete a key
-  ok !$t->find (16);                                                            # Key no longer present
+  ok !$t->find  (16);                                                           # Key no longer present
+
+
+  ok  $t->find  (17) == 34;                                                     # Find by key
+  my @k;
+  for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
+   {push @k, $i->key unless $i->key == 17;
+   }
+
+  $t->delete($_) for @k;                                                        # Delete
+
+  ok $t->find(17) == 34 && $t->count  == 1;
  }
 
-if (1) {                                                                        #Titerator #TTree::Multi::Iterator::next  #TTree::Multi::Iterator::more
+if (1) {
   my $k = 3;  my $n = 18;
   my $t = disordered  $k, $n;
   my @s;
