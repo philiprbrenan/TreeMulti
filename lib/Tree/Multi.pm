@@ -124,7 +124,7 @@ sub reUp($@)                                                                    
   $_->up = $tree for @children;                                                 # Connect child to parent
  }
 
-sub splitFullNode($)                                                            #P Split a node if it is full
+sub splitFullNode($)                                                            #P Split a node, that is not a leaf, if it is full
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
   return unless $node->node->@* == maximumNumberOfNodes;                        # Only split the node if it is full
@@ -163,13 +163,13 @@ sub splitLeafNode($)                                                            
   @_ == 1 or confess;
 
   confess unless my $p = $node->up;                                             # Check parent
-  confess unless $node->keys->@* == maximumNumberOfNodes;                       # Check size
+  confess unless $node->keys->@* == maximumNumberOfKeys + 1;                    # Check size - should be one greater than allowed - that is why we are splitting it.
 
   my ($kl, $k, $kr) = separateKeys $node;
   my ($dl, $d, $dr) = separateData $node;
 
   my ($l, $r)     = (new, new);                                                 # Create new nodes
-  $l->up = $r->up = $p;
+  $l->up   = $r->up        = $p;
   $l->keys = $kl; $l->data = $dl;
   $r->keys = $kr; $r->data = $dr;
 
@@ -196,7 +196,6 @@ sub splitRootLeafNode($)                                                        
   my ($dl, $d, $dr) = separateData $node;
 
   my ($p, $l, $r) = ($node, new, new);                                          # New root and children
-
   $l->up   = $r->up        = $p;                                                # Initialize children
   $l->keys = $kl; $l->data = $dl;
   $r->keys = $kr; $r->data = $dr;
