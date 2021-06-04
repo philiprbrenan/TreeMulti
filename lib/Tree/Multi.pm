@@ -1940,7 +1940,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 155;
+ {plan tests => 157;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -2740,7 +2740,7 @@ END
  }
 
 if (!$develop) {
-  my $K = 9; my $N = 512; my $e = 0;
+  my $K = 9; my $N = 256; my $e = 0;
   for   my $k(3..$K)
    {for my $n(0..$N)
      {my $t = disordered($k, $n);
@@ -2749,6 +2749,9 @@ if (!$develop) {
    }
   is_deeply $e, 0;
  }
-else { ok 1}
+else {ok 1}
+
+if (!$develop) {my $t = disordered(4, 1024); ok disorderedCheck($t, 4, 1024)} else {ok 1}
+if (!$develop) {my $t = disordered(3, 1024); ok disorderedCheck($t, 4, 1024)} else {ok 1}
 
 lll "Success:", time - $start;
