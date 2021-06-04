@@ -451,7 +451,7 @@ sub depth($)                                                                    
   confess "Should not happen";
  }
 
-sub deleteLeafKey($$)                                                           #P Delete a (key, pair) in a leaf
+sub deleteLeafKey($$)                                                           #P Delete a key in a leaf.
  {my ($tree, $i) = @_;                                                          # Tree, index to delete at
   @_ == 2 or confess;
   confess "Not a leaf" unless leaf $tree;
@@ -461,12 +461,12 @@ sub deleteLeafKey($$)                                                           
    {if ($tree->keys->[$j] == $key)
      {splice $tree->keys->@*, $j, 1;                                            # Remove keys
       splice $tree->data->@*, $j, 1;                                            # Remove data
-      last;
+      return;
      }
    }
  }
 
-sub deleteKey($$)                                                               #P Delete a (key, data) pair in a node
+sub deleteKey($$)                                                               #P Delete a key
  {my ($tree, $i) = @_;                                                          # Tree, index to delete at
   @_ == 2 or confess;
   if (leaf $tree)                                                               # Delete from a leaf
@@ -486,7 +486,7 @@ sub deleteKey($$)                                                               
    }
  }
 
-sub delete($$)                                                                  # Find a key in a tree, delete it, return the new tree
+sub delete($$)                                                                  # Find a key in a tree, delete it and return any associated data.
  {my ($root, $key) = @_;                                                        # Tree root, key
   @_ == 2 or confess;
 
@@ -495,23 +495,24 @@ sub delete($$)                                                                  
    {my @k = $tree->keys->@*;
 
     if ($key < $k[0])                                                           # Less than smallest key in node
-     {return unless $tree = $tree->node->[0];
+     {return undef unless $tree = $tree->node->[0];
       next;
      }
 
     if ($key > $k[-1])                                                          # Greater than largest key in node
-     {return unless $tree = $tree->node->[-1];
+     {return undef unless $tree = $tree->node->[-1];
       next;
      }
 
     for my $i(keys @k)                                                          # Search the keys in this node
      {my  $s = $key <=> $k[$i];                                                 # Compare key
       if ($s == 0)                                                              # Delete found key
-       {deleteKey $tree, $i;                                                    # Delete
-        return;                                                                 # New tree
+       {my $d = $tree->data->[$i];                                              # Save data
+        deleteKey $tree, $i;                                                    # Delete the key
+        return $d;                                                              # Return data associated with key
        }
       if ($s < 0)                                                               # Less than current key
-       {return unless $tree = $tree->node->[$i];
+       {return undef unless $tree = $tree->node->[$i];
         last;
        }
      }
@@ -837,19 +838,19 @@ B<Example:>
 
 
     local $numberOfKeysPerNode = 3; my $N = 13; my $t = new;
-  
+
     for my $n(1..$N)
      {$t->insert($n, $n);
      }
-  
+
     is_deeply $t->leftMost ->keys, [1, 2];
     is_deeply $t->rightMost->keys, [13];
     ok $t->leftMost ->leaf;
     ok $t->rightMost->leaf;
-  
+
     ok $t->root == $t;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     ok T($t, <<END);
    6
      3
@@ -860,7 +861,7 @@ B<Example:>
        10 11
        13
   END
-  
+
 
 =head2 leaf($tree)
 
@@ -873,21 +874,21 @@ B<Example:>
 
 
     local $numberOfKeysPerNode = 3; my $N = 13; my $t = new;
-  
+
     for my $n(1..$N)
      {$t->insert($n, $n);
      }
-  
+
     is_deeply $t->leftMost ->keys, [1, 2];
     is_deeply $t->rightMost->keys, [13];
-  
+
     ok $t->leftMost ->leaf;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     ok $t->rightMost->leaf;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
     ok $t->root == $t;
-  
+
     ok T($t, <<END);
    6
      3
@@ -898,7 +899,7 @@ B<Example:>
        10 11
        13
   END
-  
+
 
 =head2 find($root, $key)
 
@@ -912,10 +913,10 @@ B<Example:>
 
 
     local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
-  
+
     my $t = Tree::Multi::new;                                                     # Construct tree
        $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse
-  
+
     is_deeply $t->print, <<END;
    15 21 27
      3 6 9 12
@@ -934,32 +935,32 @@ B<Example:>
        28 29
        31 32
   END
-  
+
     ok  $t->height     ==  3;                                                     # Height
-  
-  
+
+
     ok  $t->find  (16) == 32;                                                     # Find by key  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
         $t->delete(16);                                                           # Delete a key
-  
+
     ok !$t->find  (16);                                                           # Key no longer present  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
-  
-  
+
+
+
     ok  $t->find  (17) == 34;                                                     # Find by key  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
     my @k;
     for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
      {push @k, $i->key unless $i->key == 17;
      }
-  
+
     $t->delete($_) for @k;                                                        # Delete
-  
-  
+
+
     ok $t->find(17) == 34 && $t->size == 1;                                       # Size  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
 
 =head2 leftMost($tree)
 
@@ -972,21 +973,21 @@ B<Example:>
 
 
     local $numberOfKeysPerNode = 3; my $N = 13; my $t = new;
-  
+
     for my $n(1..$N)
      {$t->insert($n, $n);
      }
-  
-  
+
+
     is_deeply $t->leftMost ->keys, [1, 2];  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
     is_deeply $t->rightMost->keys, [13];
-  
+
     ok $t->leftMost ->leaf;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
     ok $t->rightMost->leaf;
     ok $t->root == $t;
-  
+
     ok T($t, <<END);
    6
      3
@@ -997,7 +998,7 @@ B<Example:>
        10 11
        13
   END
-  
+
 
 =head2 rightMost($tree)
 
@@ -1010,21 +1011,21 @@ B<Example:>
 
 
     local $numberOfKeysPerNode = 3; my $N = 13; my $t = new;
-  
+
     for my $n(1..$N)
      {$t->insert($n, $n);
      }
-  
+
     is_deeply $t->leftMost ->keys, [1, 2];
-  
+
     is_deeply $t->rightMost->keys, [13];  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
     ok $t->leftMost ->leaf;
-  
+
     ok $t->rightMost->leaf;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
     ok $t->root == $t;
-  
+
     ok T($t, <<END);
    6
      3
@@ -1035,7 +1036,7 @@ B<Example:>
        10 11
        13
   END
-  
+
 
 =head2 height($tree)
 
@@ -1048,41 +1049,41 @@ B<Example:>
 
 
     local $Tree::Multi::numberOfKeysPerNode = 3;
-  
+
     my $t = new;      ok $t->height == 0; ok $t->leftMost->depth == 0; ok $t->size == 0;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(1, 1); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 1;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(2, 2); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 2;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(3, 3); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 3;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(4, 4); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 4;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(5, 5); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 5;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(6, 6); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 6;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(7, 7); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 7;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(8, 8); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 8;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     is_deeply $t->flat, <<END;  owf $logFile, $t->flat if $develop;
-  
+
              3           6
      1   2       4   5       7   8
   END
-  
-  
+
+
 
 =head2 depth($tree)
 
@@ -1095,41 +1096,41 @@ B<Example:>
 
 
     local $Tree::Multi::numberOfKeysPerNode = 3;
-  
+
     my $t = new;      ok $t->height == 0; ok $t->leftMost->depth == 0; ok $t->size == 0;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(1, 1); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 1;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(2, 2); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 2;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(3, 3); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 3;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(4, 4); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 4;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(5, 5); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 5;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(6, 6); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 6;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(7, 7); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 7;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(8, 8); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 8;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     is_deeply $t->flat, <<END;  owf $logFile, $t->flat if $develop;
-  
+
              3           6
      1   2       4   5       7   8
   END
-  
-  
+
+
 
 =head2 delete($root, $key)
 
@@ -1143,10 +1144,10 @@ B<Example:>
 
 
     local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
-  
+
     my $t = Tree::Multi::new;                                                     # Construct tree
        $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse
-  
+
     is_deeply $t->print, <<END;
    15 21 27
      3 6 9 12
@@ -1165,28 +1166,28 @@ B<Example:>
        28 29
        31 32
   END
-  
+
     ok  $t->height     ==  3;                                                     # Height
-  
+
     ok  $t->find  (16) == 32;                                                     # Find by key
-  
+
         $t->delete(16);                                                           # Delete a key  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
     ok !$t->find  (16);                                                           # Key no longer present
-  
-  
+
+
     ok  $t->find  (17) == 34;                                                     # Find by key
     my @k;
     for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
      {push @k, $i->key unless $i->key == 17;
      }
-  
-  
+
+
     $t->delete($_) for @k;                                                        # Delete  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     ok $t->find(17) == 34 && $t->size == 1;                                       # Size
-  
+
 
 =head2 insert($tree, $key, $data)
 
@@ -1201,12 +1202,12 @@ B<Example:>
 
 
     local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
-  
+
     my $t = Tree::Multi::new;                                                     # Construct tree
-  
+
        $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     is_deeply $t->print, <<END;
    15 21 27
      3 6 9 12
@@ -1225,24 +1226,24 @@ B<Example:>
        28 29
        31 32
   END
-  
+
     ok  $t->height     ==  3;                                                     # Height
-  
+
     ok  $t->find  (16) == 32;                                                     # Find by key
         $t->delete(16);                                                           # Delete a key
     ok !$t->find  (16);                                                           # Key no longer present
-  
-  
+
+
     ok  $t->find  (17) == 34;                                                     # Find by key
     my @k;
     for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
      {push @k, $i->key unless $i->key == 17;
      }
-  
+
     $t->delete($_) for @k;                                                        # Delete
-  
+
     ok $t->find(17) == 34 && $t->size == 1;                                       # Size
-  
+
 
 =head2 iterator($tree)
 
@@ -1255,22 +1256,22 @@ B<Example:>
 
 
     local $numberOfKeysPerNode = 3; my $N = 256; my $e = 0;  my $t = new;
-  
+
     for my $n(0..$N)
      {$t->insert($n, $n);
-  
+
       my @n; for(my $i = $t->iterator; $i->more; $i->next) {push @n, $i->key}  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
       ++$e unless dump(\@n) eq dump [0..$n];
      }
-  
+
     is_deeply $e, 0;
-  
+
     local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
-  
+
     my $t = Tree::Multi::new;                                                     # Construct tree
        $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse
-  
+
     is_deeply $t->print, <<END;
    15 21 27
      3 6 9 12
@@ -1289,26 +1290,26 @@ B<Example:>
        28 29
        31 32
   END
-  
+
     ok  $t->height     ==  3;                                                     # Height
-  
+
     ok  $t->find  (16) == 32;                                                     # Find by key
         $t->delete(16);                                                           # Delete a key
     ok !$t->find  (16);                                                           # Key no longer present
-  
-  
+
+
     ok  $t->find  (17) == 34;                                                     # Find by key
     my @k;
-  
+
     for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
      {push @k, $i->key unless $i->key == 17;
      }
-  
+
     $t->delete($_) for @k;                                                        # Delete
-  
+
     ok $t->find(17) == 34 && $t->size == 1;                                       # Size
-  
+
 
 =head2 Tree::Multi::Iterator::next($iter)
 
@@ -1321,15 +1322,15 @@ B<Example:>
 
 
     local $numberOfKeysPerNode = 3; my $N = 256; my $e = 0;  my $t = new;
-  
+
     for my $n(0..$N)
      {$t->insert($n, $n);
       my @n; for(my $i = $t->iterator; $i->more; $i->next) {push @n, $i->key}
       ++$e unless dump(\@n) eq dump [0..$n];
      }
-  
+
     is_deeply $e, 0;
-  
+
 
 =head2 reverseIterator($tree)
 
@@ -1342,23 +1343,23 @@ B<Example:>
 
 
     local $numberOfKeysPerNode = 3; my $N = 64;  my $e = 0;
-  
+
     for my $n(0..$N)
      {my $t = new;
       for my $i(0..$n)
        {$t->insert($i, $i);
        }
       my @n;
-  
+
       for(my $i = $t->reverseIterator; $i->less; $i->prev)  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
        {push @n, $i->key;
        }
       ++$e unless dump(\@n) eq dump [reverse 0..$n];
      }
-  
+
     is_deeply $e, 0;
-  
+
 
 =head2 Tree::Multi::ReverseIterator::prev($iter)
 
@@ -1371,7 +1372,7 @@ B<Example:>
 
 
     local $numberOfKeysPerNode = 3; my $N = 64;  my $e = 0;
-  
+
     for my $n(0..$N)
      {my $t = new;
       for my $i(0..$n)
@@ -1383,9 +1384,9 @@ B<Example:>
        }
       ++$e unless dump(\@n) eq dump [reverse 0..$n];
      }
-  
+
     is_deeply $e, 0;
-  
+
 
 =head2 flat($tree, @title)
 
@@ -1408,16 +1409,16 @@ B<Example:>
     $t->insert(6, 6); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 6;
     $t->insert(7, 7); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 7;
     $t->insert(8, 8); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 8;
-  
-  
+
+
     is_deeply $t->flat, <<END;  owf $logFile, $t->flat if $develop;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
              3           6
      1   2       4   5       7   8
   END
-  
-  
+
+
 
 =head2 print($tree, $i)
 
@@ -1431,11 +1432,11 @@ B<Example:>
 
 
     local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
-  
+
     my $t = Tree::Multi::new;                                                     # Construct tree
        $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse
-  
-  
+
+
     is_deeply $t->print, <<END;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
    15 21 27
@@ -1455,24 +1456,24 @@ B<Example:>
        28 29
        31 32
   END
-  
+
     ok  $t->height     ==  3;                                                     # Height
-  
+
     ok  $t->find  (16) == 32;                                                     # Find by key
         $t->delete(16);                                                           # Delete a key
     ok !$t->find  (16);                                                           # Key no longer present
-  
-  
+
+
     ok  $t->find  (17) == 34;                                                     # Find by key
     my @k;
     for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
      {push @k, $i->key unless $i->key == 17;
      }
-  
+
     $t->delete($_) for @k;                                                        # Delete
-  
+
     ok $t->find(17) == 34 && $t->size == 1;                                       # Size
-  
+
 
 =head2 size($tree)
 
@@ -1485,41 +1486,41 @@ B<Example:>
 
 
     local $Tree::Multi::numberOfKeysPerNode = 3;
-  
+
     my $t = new;      ok $t->height == 0; ok $t->leftMost->depth == 0; ok $t->size == 0;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(1, 1); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 1;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(2, 2); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 2;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(3, 3); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 3;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(4, 4); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 4;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(5, 5); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 5;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(6, 6); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 6;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(7, 7); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 7;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     $t->insert(8, 8); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 8;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-  
+
     is_deeply $t->flat, <<END;  owf $logFile, $t->flat if $develop;
-  
+
              3           6
      1   2       4   5       7   8
   END
-  
-  
+
+
 
 
 =head2 Tree::Multi Definition
@@ -1590,12 +1591,12 @@ B<Example:>
 
 
     local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
-  
-  
+
+
     my $t = Tree::Multi::new;                                                     # Construct tree  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
        $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse
-  
+
     is_deeply $t->print, <<END;
    15 21 27
      3 6 9 12
@@ -1614,24 +1615,24 @@ B<Example:>
        28 29
        31 32
   END
-  
+
     ok  $t->height     ==  3;                                                     # Height
-  
+
     ok  $t->find  (16) == 32;                                                     # Find by key
         $t->delete(16);                                                           # Delete a key
     ok !$t->find  (16);                                                           # Key no longer present
-  
-  
+
+
     ok  $t->find  (17) == 34;                                                     # Find by key
     my @k;
     for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
      {push @k, $i->key unless $i->key == 17;
      }
-  
+
     $t->delete($_) for @k;                                                        # Delete
-  
+
     ok $t->find(17) == 34 && $t->size == 1;                                       # Size
-  
+
 
 =head2 minimumNumberOfKeys()
 
@@ -1955,7 +1956,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 180;
+ {plan tests => 254;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -2093,7 +2094,7 @@ if (1) {
      16
 END
 
-  ok $t->find(16); $t->delete(16);  ok !$t->find(16); ok T($t, <<END);
+  ok $t->find(16); ok $t->delete(16) == 2 * 16;  ok !$t->find(16); ok T($t, <<END);
  6
    3
      1 2
@@ -2105,7 +2106,7 @@ END
      15
 END
 
-  ok $t->find(15); $t->delete(15);  ok !$t->find(15); ok T($t, <<END);
+  ok $t->find(15); ok $t->delete(15) == 2 * 15;  ok !$t->find(15); ok T($t, <<END);
  6
    3
      1 2
@@ -2116,7 +2117,7 @@ END
      13 14
 END
 
-  ok $t->find(14); $t->delete(14);  ok !$t->find(14); ok T($t, <<END);
+  ok $t->find(14); ok $t->delete(14) == 2 * 14;  ok !$t->find(14); ok T($t, <<END);
  6
    3
      1 2
@@ -2127,7 +2128,7 @@ END
      13
 END
 
-  ok $t->find(13); $t->delete(13);  ok !$t->find(13); ok T($t, <<END);
+  ok $t->find(13); ok $t->delete(13) == 2 * 13;  ok !$t->find(13); ok T($t, <<END);
  6
    3
      1 2
@@ -2138,7 +2139,7 @@ END
      12
 END
 
-  ok $t->find(12); $t->delete(12);  ok !$t->find(12); ok T($t, <<END);
+  ok $t->find(12); ok $t->delete(12) == 2 * 12;  ok !$t->find(12); ok T($t, <<END);
  6
    3
      1 2
@@ -2148,7 +2149,7 @@ END
      10 11
 END
 
-  ok $t->find(11); $t->delete(11);  ok !$t->find(11); ok T($t, <<END);
+  ok $t->find(11); ok $t->delete(11) == 2 * 11;  ok !$t->find(11); ok T($t, <<END);
  6
    3
      1 2
@@ -2158,7 +2159,7 @@ END
      10
 END
 
-  ok $t->find(10); $t->delete(10);  ok !$t->find(10); ok T($t, <<END);
+  ok $t->find(10); ok $t->delete(10) == 2 * 10;  ok !$t->find(10); ok T($t, <<END);
  3 6 8
    1 2
    4 5
@@ -2166,58 +2167,56 @@ END
    9
 END
 
-  ok $t->find(9);  $t->delete(9);   ok !$t->find(9);  ok T($t, <<END);
+  ok $t->find(9); ok $t->delete(9) == 2 * 9;   ok !$t->find(9);  ok T($t, <<END);
  3 6
    1 2
    4 5
    7 8
 END
 
-  ok $t->find(8);  $t->delete(8);   ok !$t->find(8);  ok T($t, <<END);
+  ok $t->find(8); ok $t->delete(8) == 2 * 8;   ok !$t->find(8);  ok T($t, <<END);
  3 6
    1 2
    4 5
    7
 END
 
-  ok $t->find(7);  $t->delete(7);   ok !$t->find(7);  ok T($t, <<END);
+  ok $t->find(7); ok $t->delete(7) == 2 * 7;   ok !$t->find(7);  ok T($t, <<END);
  3 5
    1 2
    4
    6
 END
 
-  ok $t->find(6);  $t->delete(6);   ok !$t->find(6);  ok T($t, <<END);
+  ok $t->find(6); ok $t->delete(6) == 2 * 6;   ok !$t->find(6);  ok T($t, <<END);
  3
    1 2
    4 5
 END
 
-  ok $t->find(5);  $t->delete(5);   ok !$t->find(5);  ok T($t, <<END);
+  ok $t->find(5); ok $t->delete(5) == 2 * 5;   ok !$t->find(5);  ok T($t, <<END);
  3
    1 2
    4
 END
 
-  ok $t->find(4);  $t->delete(4);   ok !$t->find(4);  ok T($t, <<END);
+  ok $t->find(4); ok $t->delete(4) == 2 * 4;   ok !$t->find(4);  ok T($t, <<END);
  2
    1
    3
 END
 
-  ok $t->find(3);
-  $t->delete(3);
-  ok !$t->find(3);
+  ok $t->find(3);  ok $t->delete(3) == 2 * 3; ok !$t->find(3);
 
   ok T($t, <<END);
  1 2
 END
 
-  ok $t->find(2);  $t->delete(2);   ok !$t->find(2);  ok T($t, <<END);
+  ok $t->find(2); ok $t->delete(2) == 2 * 2;   ok !$t->find(2);  ok T($t, <<END);
  1
 END
 
-  ok $t->find(1);  $t->delete(1);   ok !$t->find(1);  ok T($t, <<END);
+  ok $t->find(1); ok $t->delete(1) == 2 * 1;   ok !$t->find(1);  ok T($t, <<END);
 END
  }
 
@@ -2234,24 +2233,23 @@ if (1) {
    4 5
 END
 
-  $t->delete(4);  ok T($t, <<END);
+  ok $t->delete(4) == 2 * 4;  ok T($t, <<END);
  3
    1 2
    5
 END
 
-  $t->delete(1);  ok T($t, <<END);
+  ok $t->delete(1) == 2 * 1;  ok T($t, <<END);
  3
    2
    5
 END
 
-  $t->delete(2);
-   ok T($t, <<END);
+  ok $t->delete(2) == 2 * 2;   ok T($t, <<END);
  3 5
 END
 
-  $t->delete(3);  ok T($t, <<END);
+  ok $t->delete(3) == 2 * 3;  ok T($t, <<END);
  5
 END
  }
@@ -2274,7 +2272,7 @@ if (1) {
      13 14 15
 END
 
-  ok $t->find(3);  $t->delete(3);    ok !$t->find(3);  ok T($t, <<END);
+  ok $t->find(3); is_deeply $t->delete(3), 2 * 3;    ok !$t->find(3);  ok T($t, <<END);
  6
    4
      1 2
@@ -2285,7 +2283,7 @@ END
      13 14 15
 END
 
-  ok $t->find(9);  $t->delete(9);    ok !$t->find(9);  ok T($t, <<END);
+  ok $t->find(9); ok $t->delete(9) == 2 * 9;    ok !$t->find(9);  ok T($t, <<END);
  6
    4
      1 2
@@ -2296,7 +2294,7 @@ END
      13 14 15
 END
 
-  ok $t->find(4);  $t->delete(4);    ok !$t->find(4);  ok T($t, <<END);
+  ok $t->find(4); ok $t->delete(4) == 2 * 4;    ok !$t->find(4);  ok T($t, <<END);
  10
    2 6
      1
@@ -2307,7 +2305,7 @@ END
      13 14 15
 END
 
-  ok $t->find(12); $t->delete(12);   ok !$t->find(12); ok T($t, <<END);
+  ok $t->find(12); ok $t->delete(12) == 2 * 12;   ok !$t->find(12); ok T($t, <<END);
  10
    2 6
      1
@@ -2318,7 +2316,7 @@ END
      14 15
 END
 
-  ok $t->find(2);  $t->delete(2);    ok !$t->find(2);  ok T($t, <<END);
+  ok $t->find(2); ok $t->delete(2) == 2 * 2;    ok !$t->find(2);  ok T($t, <<END);
  10
    6
      1 5
@@ -2328,7 +2326,7 @@ END
      14 15
 END
 
-  ok $t->find(13); $t->delete(13);   ok !$t->find(13); ok T($t, <<END);
+  ok $t->find(13); ok $t->delete(13) == 2 * 13;   ok !$t->find(13); ok T($t, <<END);
  10
    6
      1 5
@@ -2338,7 +2336,7 @@ END
      15
 END
 
-  ok $t->find(6);  $t->delete(6);    ok !$t->find(6);  ok T($t, <<END);
+  ok $t->find(6); ok $t->delete(6) == 2 * 6;    ok !$t->find(6);  ok T($t, <<END);
  10
    7
      1 5
@@ -2348,7 +2346,7 @@ END
      15
 END
 
-  ok $t->find(14); $t->delete(14);   ok !$t->find(14); ok T($t, <<END);
+  ok $t->find(14); ok $t->delete(14) == 2 * 14;   ok !$t->find(14); ok T($t, <<END);
  7 10
    1 5
    8
@@ -2374,7 +2372,7 @@ if (1) {
      13 14 15
 END
 
-  ok $t->find(6);  $t->delete(6);   ok !$t->find(6);  ok T($t, <<END);
+  ok $t->find(6); ok $t->delete(6) == 2 * 6;   ok !$t->find(6);  ok T($t, <<END);
  7
    3
      1 2
@@ -2385,7 +2383,7 @@ END
      13 14 15
 END
 
-  ok $t->find(7);  $t->delete(7);   ok !$t->find(7);  ok T($t, <<END);
+  ok $t->find(7); ok $t->delete(7) == 2 * 7;   ok !$t->find(7);  ok T($t, <<END);
  8
    3
      1 2
@@ -2396,7 +2394,7 @@ END
      13 14 15
 END
 
-  ok $t->find(8);  $t->delete(8);   ok !$t->find(8);  ok T($t, <<END);
+  ok $t->find(8); ok $t->delete(8) == 2 * 8;   ok !$t->find(8);  ok T($t, <<END);
  9
    3
      1 2
@@ -2406,7 +2404,7 @@ END
      13 14 15
 END
 
-  ok $t->find(9);  $t->delete(9);   ok !$t->find(9);  ok T($t, <<END);
+  ok $t->find(9); ok $t->delete(9) == 2 * 9;   ok !$t->find(9);  ok T($t, <<END);
  10
    3
      1 2
@@ -2416,7 +2414,7 @@ END
      13 14 15
 END
 
-  ok $t->find(10); $t->delete(10);  ok !$t->find(10); ok T($t, <<END);
+  ok $t->find(10); ok $t->delete(10) == 2 * 10;  ok !$t->find(10); ok T($t, <<END);
  3 5 12
    1 2
    4
@@ -2424,7 +2422,7 @@ END
    13 14 15
 END
 
-  ok $t->find(3);  $t->delete(3);   ok !$t->find(3);  ok T($t, <<END);
+  ok $t->find(3); ok $t->delete(3) == 2 * 3;   ok !$t->find(3);  ok T($t, <<END);
  2 5 12
    1
    4
@@ -2432,53 +2430,53 @@ END
    13 14 15
 END
 
-  ok $t->find(2);  $t->delete(2);   ok !$t->find(2);  ok T($t, <<END);
+  ok $t->find(2); ok $t->delete(2) == 2 * 2;   ok !$t->find(2);  ok T($t, <<END);
  5 12
    1 4
    11
    13 14 15
 END
 
-  ok $t->find(5);  $t->delete(5);   ok !$t->find(5);  ok T($t, <<END);
+  ok $t->find(5); ok $t->delete(5) == 2 * 5;   ok !$t->find(5);  ok T($t, <<END);
  4 12
    1
    11
    13 14 15
 END
 
-  ok $t->find(4);  $t->delete(4);   ok !$t->find(4);  ok T($t, <<END);
+  ok $t->find(4); ok $t->delete(4) == 2 * 4;   ok !$t->find(4);  ok T($t, <<END);
  12
    1 11
    13 14 15
 END
 
-  ok $t->find(12); $t->delete(12);  ok !$t->find(12); ok T($t, <<END);
+  ok $t->find(12); ok $t->delete(12) == 2 * 12;  ok !$t->find(12); ok T($t, <<END);
  13
    1 11
    14 15
 END
 
-  ok $t->find(13); $t->delete(13);  ok !$t->find(13); ok T($t, <<END);
+  ok $t->find(13); ok $t->delete(13) == 2 * 13;  ok !$t->find(13); ok T($t, <<END);
  14
    1 11
    15
 END
 
-  ok $t->find(14); $t->delete(14);  ok !$t->find(14); ok T($t, <<END);
+  ok $t->find(14); ok $t->delete(14) == 2 * 14;  ok !$t->find(14); ok T($t, <<END);
  11
    1
    15
 END
 
-  ok $t->find(11); $t->delete(11);  ok !$t->find(11); ok T($t, <<END);
+  ok $t->find(11); ok $t->delete(11) == 2 * 11;  ok !$t->find(11); ok T($t, <<END);
  1 15
 END
 
-  ok $t->find(1);  $t->delete(1);   ok !$t->find(1);  ok T($t, <<END);
+  ok $t->find(1); ok $t->delete(1) == 2 * 1;   ok !$t->find(1);  ok T($t, <<END);
  15
 END
 
-  ok $t->find(15); $t->delete(15);  ok !$t->find(15); ok T($t, <<END);
+  ok $t->find(15); ok $t->delete(15) == 2 * 15;  ok !$t->find(15); ok T($t, <<END);
 END
  }
 
@@ -2779,20 +2777,18 @@ if (1) {                                                                        
      31 32
 END
 
+  ok  $t->size       == 32;                                                     # Size
   ok  $t->height     ==  3;                                                     # Height
-
-  ok  $t->find  (16) == 32;                                                     # Find by key
-      $t->delete(16);                                                           # Delete a key
+  ok  $t->delete(16) == 2 * 16;                                                 # Delete a key
   ok !$t->find  (16);                                                           # Key no longer present
-
-
   ok  $t->find  (17) == 34;                                                     # Find by key
+
   my @k;
   for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
    {push @k, $i->key unless $i->key == 17;
    }
 
-  $t->delete($_) for @k;                                                        # Delete
+  ok $t->delete($_) == 2 * $_ for @k;                                           # Delete
 
   ok $t->find(17) == 34 && $t->size == 1;                                       # Size
  }
