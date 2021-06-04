@@ -52,7 +52,7 @@ sub full($)                                                                     
 sub halfFull($)                                                                 #P Confirm that a node is half full.
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
-#  $tree->keys->@* <= maximumNumberOfKeys+1 or confess "Keys";
+  $tree->keys->@* <= maximumNumberOfKeys+1 or confess "Keys";
   $tree->keys->@* == minimumNumberOfKeys
  }
 
@@ -83,7 +83,7 @@ sub separateKeys($)                                                             
   (\@l, $k[0], \@r);
  }
 
-sub separateData($)                                                             #P Return ([lower], center, [upper]) data
+sub separateData($)                                                             #P Return ([lower], center, [upper]) data.
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
   my @d = $node->data->@*;
@@ -97,7 +97,7 @@ sub separateData($)                                                             
   (\@l, $d[0], \@r);
  }
 
-sub separateNode($)                                                             #P Return ([lower], [upper]) children
+sub separateNode($)                                                             #P Return ([lower], [upper]) children.
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
   my @n = $node->node->@*;
@@ -117,72 +117,48 @@ sub separateNode($)                                                             
   (\@l, \@r);
  }
 
-sub reUp($@)                                                                    #P Reconnect the children to their new parent
- {my ($node, @children) = @_;                                                   # Node, children
+sub reUp($@)                                                                    #P Reconnect the children to their new parent.
+ {my ($tree, @children) = @_;                                                   # Tree, children
   @_ > 0 or confess;
-
-  $_->up = $node for @children;                                                 # Add new child to parent known to be not full
+  $tree->keys->@* <= maximumNumberOfKeys or confess "Keys";
+  $_->up = $tree for @children;                                                 # Connect child to parent
  }
 
-sub splitNode($)                                                                #P Split a full node in half assuming it has a non full parent
+sub splitFullNode($)                                                            #P Split a node if it is full
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
-
-  confess unless my $p = $node->up;                                             # Check parent
-  confess unless $node->node->@* == maximumNumberOfNodes;                       # Check size
+  return unless $node->node->@* == maximumNumberOfNodes;                        # Only split the node if it is full
 
   my ($kl, $k, $kr) = separateKeys $node;
   my ($dl, $d, $dr) = separateData $node;
   my ($cl, $cr)     = separateNode $node;
 
   my ($l, $r) = (new, new);                                                     # New child nodes
-  $l->up   = $r->up = $p;
   $l->keys = $kl; $l->data = $dl; $l->node = $cl; reUp $l, @$cl;
   $r->keys = $kr; $r->data = $dr; $r->node = $cr; reUp $r, @$cr;
 
-  my @n = $p->node->@*;                                                         # Insert new nodes in parent known to be not full
-  for my $i(keys @n)
-   {if ($n[$i] == $node)
-     {splice $p->keys->@*, $i, 0, $k;
-      splice $p->data->@*, $i, 0, $d;
-      splice $p->node->@*, $i, 1, $l, $r;
-      return;
+  if (my $p = $node->up)                                                        # Not a root node
+   {$l->up  = $r->up = $p;
+    my @n = $p->node->@*;                                                       # Insert new nodes in parent known to be not full
+    for my $i(keys @n)
+     {if ($n[$i] == $node)
+       {splice $p->keys->@*, $i, 0, $k;
+        splice $p->data->@*, $i, 0, $d;
+        splice $p->node->@*, $i, 1, $l, $r;
+        return;
+       }
      }
+    confess;
    }
-  confess;
+  else                                                                          # Root node
+   {$l->up = $r->up = $node;
+    $node->keys = [$k];
+    $node->data = [$d];
+    $node->node = [$l, $r];
+   }
  }
 
-sub splitRootNode($)                                                            #P Split a full root
- {my ($node) = @_;                                                              # Node to split
-  @_ == 1 or confess;
-
-  confess if $node->up;                                                         # Check parent
-  confess unless $node->node->@* == maximumNumberOfNodes;                       # Check size
-
-  my ($kl, $k, $kr) = separateKeys $node;
-  my ($dl, $d, $dr) = separateData $node;
-  my ($cl, $cr)     = separateNode $node;
-
-  my $p = $node;
-  my ($l, $r)     = (new, new);
-  $l->up   = $r->up = $p;
-  $l->keys = $kl; $l->data = $dl; $l->node = $cl; reUp $l, @$cl;
-  $r->keys = $kr; $r->data = $dr; $r->node = $cr; reUp $r, @$cr;
-
-  $p->keys = [$k];
-  $p->data = [$d];
-  $p->node = [$l, $r];
- }
-
-sub splitFullNode($)                                                            #P Split a full node
- {my ($node) = @_;                                                              # Node to split
-  @_ == 1 or confess;
-  return $node  unless $node->node->@* == maximumNumberOfNodes;                 # Check size
-  return splitNode     $node if $node->up;                                      # Node has a parent
-  return splitRootNode $node                                                    # Root node
- }
-
-sub splitLeafNode($)                                                            #P Split a full leaf node in assuming it has a non full parent
+sub splitLeafNode($)                                                            #P Split a full leaf node in assuming it has a non full parent.
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
 
@@ -209,7 +185,7 @@ sub splitLeafNode($)                                                            
   confess;
  }
 
-sub splitRootLeafNode($)                                                        #P Split a full root that is also a leaf
+sub splitRootLeafNode($)                                                        #P Split a full root that is also a leaf.
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
 
@@ -230,7 +206,7 @@ sub splitRootLeafNode($)                                                        
   $p->node = [$l, $r];
  }
 
-sub findAndSplit($$)                                                            #P Find a key in a tree splitting full nodes along the path to the key
+sub findAndSplit($$)                                                            #P Find a key in a tree splitting full nodes along the path to the key.
  {my ($root, $key) = @_;                                                        # Root of tree, key
   @_ == 2 or confess;
 
@@ -265,7 +241,7 @@ sub findAndSplit($$)                                                            
   confess "Should not happen";
  }
 
-sub find($$)                                                                    # Find a key in a tree returning its associated data or undef if the key does not exist
+sub find($$)                                                                    # Find a key in a tree returning its associated data or undef if the key does not exist.
  {my ($root, $key) = @_;                                                        # Root of tree, key
   @_ == 2 or confess;
 
@@ -296,7 +272,7 @@ sub find($$)                                                                    
   confess "Should not happen";
  }
 
-sub indexInParent($)                                                            #P Get the index of a node in its parent
+sub indexInParent($)                                                            #P Get the index of a node in its parent.
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
   my $p = $tree->up;
@@ -309,7 +285,7 @@ sub indexInParent($)                                                            
   confess
  }
 
-sub fillFromLeftOrRight($$)                                                     #P Fill a node from the specified sibling
+sub fillFromLeftOrRight($$)                                                     #P Fill a node from the specified sibling.
  {my ($n, $dir) = @_;                                                           # Node to fill, node to fill from 0 for left or 1 for right
   @_ == 2 or confess;
 
@@ -339,7 +315,7 @@ sub fillFromLeftOrRight($$)                                                     
    }
  }
 
-sub mergeWithLeftOrRight($$)                                                    #P Merge two adjacent nodes
+sub mergeWithLeftOrRight($$)                                                    #P Merge two adjacent nodes.
  {my ($n, $dir) = @_;                                                           # Node to merge into, node to merge is on right if 1 else left
   @_ == 2 or confess;
 
@@ -375,7 +351,7 @@ sub mergeWithLeftOrRight($$)                                                    
    }
  }
 
-sub mergeOrFill($)                                                              #P make a node larger than a half node
+sub mergeOrFill($)                                                              #P make a node larger than a half node.
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
 
@@ -411,7 +387,7 @@ sub mergeOrFill($)                                                              
    }
  }
 
-sub leftMost($)                                                                 # Return the left most node below the specified one
+sub leftMost($)                                                                 # Return the left most node below the specified one.
  {my ($tree) = @_;                                                              # Tree
   for(0..999)                                                                   # Step down through tree
    {return $tree if leaf $tree;                                                 # We are on a leaf so we have arrived at the left most node
@@ -420,7 +396,7 @@ sub leftMost($)                                                                 
   confess "Should not happen";
  }
 
-sub rightMost($)                                                                # Return the right most node below the specified one
+sub rightMost($)                                                                # Return the right most node below the specified one.
  {my ($tree) = @_;                                                              # Tree
   for(0..999)                                                                   # Step down through tree
    {return $tree if leaf $tree;                                                 # We are on a leaf so we have arrived at the left most node
@@ -429,7 +405,7 @@ sub rightMost($)                                                                
   confess "Should not happen";
  }
 
-sub height($)                                                                   # Return the height of the tree
+sub height($)                                                                   # Return the height of the tree.
  {my ($tree) = @_;                                                              # Tree
   for my $n(0..999)                                                             # Step down through tree
    {if (leaf $tree)                                                             # We are on a leaf
@@ -441,7 +417,7 @@ sub height($)                                                                   
   confess "Should not happen";
  }
 
-sub depth($)                                                                    # Return the depth of a node within a tree
+sub depth($)                                                                    # Return the depth of a node within a tree.
  {my ($tree) = @_;                                                              # Tree
   return 0 if !$tree->up and !$tree->keys->@*;                                  # We are at the root and it is empty
   for my $n(1..999)                                                             # Step down through tree
@@ -466,7 +442,7 @@ sub deleteLeafKey($$)                                                           
    }
  }
 
-sub deleteKey($$)                                                               #P Delete a key
+sub deleteKey($$)                                                               #P Delete a key.
  {my ($tree, $i) = @_;                                                          # Tree, index to delete at
   @_ == 2 or confess;
   if (leaf $tree)                                                               # Delete from a leaf
@@ -521,7 +497,7 @@ sub delete($$)                                                                  
   confess "Should not happen";
  }
 
-sub insert($$$)                                                                 # Insert a key and data into a tree
+sub insert($$$)                                                                 # Insert the specified key and data into a tree.
  {my ($tree, $key, $data) = @_;                                                 # Tree, key, data
   @_ == 3 or confess;
 
@@ -553,15 +529,17 @@ sub insert($$$)                                                                 
     $node->data = [@d[0..$index], $data, @d[$index+1..$#d]];
    }
 
-  return $tree if $node->keys->@* <= maximumNumberOfKeys;                       # No need to split
-  if ($node->up)                                                                # Split leaf node that is not the root
-   {splitLeafNode $node;
-    return;
+  if ($node->keys->@* > maximumNumberOfKeys)                                    # Split because the node has got too big
+   {if ($node->up)                                                              # Split leaf node that is not the root
+     {splitLeafNode $node;
+     }
+    else
+     {splitRootLeafNode $node                                                   # Split Root node
+     }
    }
-  splitRootLeafNode $node                                                       # Split Root node
  }
 
-sub iterator($)                                                                 # Make an iterator for a tree
+sub iterator($)                                                                 # Make an iterator for a tree.
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
   my $i = genHash(__PACKAGE__.'::Iterator',                                     # Iterator
@@ -577,7 +555,7 @@ sub iterator($)                                                                 
   $i                                                                            # Iterator
  }
 
-sub Tree::Multi::Iterator::next($)                                              # Find the next key
+sub Tree::Multi::Iterator::next($)                                              # Find the next key.
  {my ($iter) = @_;                                                              # Iterator
   @_ >= 1 or confess;
   confess unless my $C = $iter->node;                                           # Current node required
@@ -616,7 +594,7 @@ sub Tree::Multi::Iterator::next($)                                              
    }
  }
 
-sub reverseIterator($)                                                          # Create a reverse iterator for a tree
+sub reverseIterator($)                                                          # Create a reverse iterator for a tree.
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
   my $i = genHash(__PACKAGE__.'::ReverseIterator',                              # Iterator
@@ -632,7 +610,7 @@ sub reverseIterator($)                                                          
   $i                                                                            # Iterator
  }
 
-sub Tree::Multi::ReverseIterator::prev($)                                       # Find the previous key
+sub Tree::Multi::ReverseIterator::prev($)                                       # Find the previous key.
  {my ($iter) = @_;                                                              # Iterator
   @_ >= 1 or confess;
   confess unless my $C = $iter->node;                                           # Current node required
@@ -672,7 +650,7 @@ sub Tree::Multi::ReverseIterator::prev($)                                       
    }
  }
 
-sub flat($@)                                                                    # Print the keys in a tree from left right to make it easier to visualize the structure of the tree
+sub flat($@)                                                                    # Print the keys in a tree from left right to make it easier to visualize the structure of the tree.
  {my ($tree, @title) = @_;                                                      # Tree, title
   confess unless $tree;
   my @s;                                                                        # Print
@@ -696,7 +674,7 @@ sub flat($@)                                                                    
   join "\n", @s, '';
  }
 
-sub print($;$)                                                                  # Print the keys in a tree optionally marking the active key
+sub print($;$)                                                                  # Print the keys in a tree optionally marking the active key.
  {my ($tree, $i) = @_;                                                          # Tree, optional index of active key
   confess unless $tree;
   my @s;                                                                        # Print
@@ -722,7 +700,7 @@ sub print($;$)                                                                  
   join "\n", @s, ''
  }
 
-sub size($)                                                                     # Count the number of keys in a tree
+sub size($)                                                                     # Count the number of keys in a tree.
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
   my $n = 0;                                                                    # Print
