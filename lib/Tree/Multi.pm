@@ -1,7 +1,6 @@
 #!/usr/bin/perl -I/home/phil/perl/cpan/DataTableText/lib/ -I.
 #-------------------------------------------------------------------------------
 # Multi-way tree in Pure Perl with an even or odd number of keys per node.
-# Multi-way tree in Pure Perl with an even or odd number of keys per node.
 # Philip R Brenan at appaapps dot com, Appa Apps Ltd Inc., 2021
 #-------------------------------------------------------------------------------
 # podDocumentation
@@ -821,7 +820,7 @@ B<Example:>
     local $numberOfKeysPerNode = 3; my $N = 13; my $t = new;
 
     for my $n(1..$N)
-     {$t = insert($t, $n, $n);
+     {$t->insert($n, $n);
      }
 
     is_deeply $t->leftMost ->keys, [1, 2];
@@ -857,7 +856,7 @@ B<Example:>
     local $numberOfKeysPerNode = 3; my $N = 13; my $t = new;
 
     for my $n(1..$N)
-     {$t = insert($t, $n, $n);
+     {$t->insert($n, $n);
      }
 
     is_deeply $t->leftMost ->keys, [1, 2];
@@ -882,12 +881,12 @@ B<Example:>
   END
 
 
-=head2 find($tree, $key)
+=head2 find($root, $key)
 
 Find a key in a tree returning its associated data or undef if the key does not exist
 
      Parameter  Description
-  1  $tree      Tree
+  1  $root      Root of tree
   2  $key       Key
 
 B<Example:>
@@ -896,7 +895,7 @@ B<Example:>
     local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
 
     my $t = Tree::Multi::new;                                                     # Construct tree
-       $t = $t->insert($_, 2 * $_) for reverse 1..32;                             # Load tree in reverse
+       $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse
 
     is_deeply $t->print, <<END;
    15 21 27
@@ -941,7 +940,7 @@ B<Example:>
     local $numberOfKeysPerNode = 3; my $N = 13; my $t = new;
 
     for my $n(1..$N)
-     {$t = insert($t, $n, $n);
+     {$t->insert($n, $n);
      }
 
 
@@ -979,7 +978,7 @@ B<Example:>
     local $numberOfKeysPerNode = 3; my $N = 13; my $t = new;
 
     for my $n(1..$N)
-     {$t = insert($t, $n, $n);
+     {$t->insert($n, $n);
      }
 
     is_deeply $t->leftMost ->keys, [1, 2];
@@ -1014,10 +1013,27 @@ Return the height of the tree
 B<Example:>
 
 
+    local $Tree::Multi::numberOfKeysPerNode = 3;
+
+    my $t = new;      ok $t->height == 0;    ok $t->leftMost->depth == 0;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+
+    $t->insert(1, 1); ok $t->height == 1;    ok $t->leftMost->depth == 1;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+
+    $t->insert(2, 2); ok $t->height == 1;    ok $t->leftMost->depth == 1;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+
+    $t->insert(3, 3); ok $t->height == 1;    ok $t->leftMost->depth == 1;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+
+    $t->insert(4, 4); ok $t->height == 2;    ok $t->leftMost->depth == 2;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+
     local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
 
     my $t = Tree::Multi::new;                                                     # Construct tree
-       $t = $t->insert($_, 2 * $_) for reverse 1..32;                             # Load tree in reverse
+       $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse
 
     is_deeply $t->print, <<END;
    15 21 27
@@ -1047,12 +1063,40 @@ B<Example:>
     ok !$t->find (16);                                                            # Key no longer present
 
 
-=head2 delete($tree, $key)
+=head2 depth($tree)
+
+Return the depth of a node within a tree
+
+     Parameter  Description
+  1  $tree      Tree
+
+B<Example:>
+
+
+    local $Tree::Multi::numberOfKeysPerNode = 3;
+
+    my $t = new;      ok $t->height == 0;    ok $t->leftMost->depth == 0;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+
+    $t->insert(1, 1); ok $t->height == 1;    ok $t->leftMost->depth == 1;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+
+    $t->insert(2, 2); ok $t->height == 1;    ok $t->leftMost->depth == 1;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+
+    $t->insert(3, 3); ok $t->height == 1;    ok $t->leftMost->depth == 1;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+
+    $t->insert(4, 4); ok $t->height == 2;    ok $t->leftMost->depth == 2;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+
+
+=head2 delete($root, $key)
 
 Find a key in a tree, delete it, return the new tree
 
      Parameter  Description
-  1  $tree      Tree
+  1  $root      Tree root
   2  $key       Key
 
 B<Example:>
@@ -1061,7 +1105,7 @@ B<Example:>
     local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
 
     my $t = Tree::Multi::new;                                                     # Construct tree
-       $t = $t->insert($_, 2 * $_) for reverse 1..32;                             # Load tree in reverse
+       $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse
 
     is_deeply $t->print, <<END;
    15 21 27
@@ -1107,7 +1151,7 @@ B<Example:>
 
     my $t = Tree::Multi::new;                                                     # Construct tree
 
-       $t = $t->insert($_, 2 * $_) for reverse 1..32;                             # Load tree in reverse  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+       $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
 
     is_deeply $t->print, <<END;
@@ -1149,7 +1193,7 @@ B<Example:>
     local $numberOfKeysPerNode = 3; my $N = 256; my $e = 0;  my $t = new;
 
     for my $n(0..$N)
-     {$t = insert($t, $n, $n);
+     {$t->insert($n, $n);
 
       my @n; for(my $i = $t->iterator; $i->more; $i->next) {push @n, $i->key}  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
@@ -1157,6 +1201,115 @@ B<Example:>
      }
 
     is_deeply $e, 0;
+
+    my $k = 3;  my $n = 18;
+    my $t = disordered  $k, $n;
+    my @s;
+    push @s, $t->flat("Start");
+    for my $k(31, 61, 6, 5, 21, 4, 3, 2, 7, 8, 11, 41, 71, 51, 81, 9, 1)
+     {$t->delete($k);
+      push @s, $t->flat("After deleting $k");
+     }
+
+    my $s = join "
+", @s;
+    owf $logFile, $s if $develop;
+    is_deeply $s, <<END;
+  Start
+
+                         6                         31
+             3                       9                            61
+     1   2       4   5       7   8       11   21        41   51        71   81
+
+  After deleting 31
+
+                         6                    21
+             3                       9                       61
+     1   2       4   5       7   8       11        41   51        71   81
+
+  After deleting 61
+
+                         6                    21
+             3                       9                       71
+     1   2       4   5       7   8       11        41   51        81
+
+  After deleting 6
+
+                         7                21
+             3                   9                       71
+     1   2       4   5       8       11        41   51        81
+
+  After deleting 5
+
+                     7                21
+             3               9                       71
+     1   2       4       8       11        41   51        81
+
+  After deleting 21
+
+                                 11
+             3       7                          71
+     1   2       4       8   9        41   51        81
+
+  After deleting 4
+
+                             11
+         2       7                          71
+     1       3       8   9        41   51        81
+
+  After deleting 3
+
+                         11
+             7                          71
+     1   2       8   9        41   51        81
+
+  After deleting 2
+
+                     11
+         7                          71
+     1       8   9        41   51        81
+
+  After deleting 7
+
+                 11
+         8                      71
+     1       9        41   51        81
+
+  After deleting 8
+
+             11             71
+     1   9        41   51        81
+
+  After deleting 11
+
+             41        71
+     1   9        51        81
+
+  After deleting 41
+
+         9        71
+     1       51        81
+
+  After deleting 71
+
+             51
+     1   9        81
+
+  After deleting 51
+
+         9
+     1       81
+
+  After deleting 81
+
+     1   9
+
+  After deleting 9
+
+     1
+
+  After deleting 1
+  END
 
 
 =head2 Tree::Multi::Iterator::next($iter)
@@ -1172,13 +1325,158 @@ B<Example:>
     local $numberOfKeysPerNode = 3; my $N = 256; my $e = 0;  my $t = new;
 
     for my $n(0..$N)
-     {$t = insert($t, $n, $n);
+     {$t->insert($n, $n);
       my @n; for(my $i = $t->iterator; $i->more; $i->next) {push @n, $i->key}
       ++$e unless dump(\@n) eq dump [0..$n];
      }
 
     is_deeply $e, 0;
 
+    my $k = 3;  my $n = 18;
+    my $t = disordered  $k, $n;
+    my @s;
+    push @s, $t->flat("Start");
+    for my $k(31, 61, 6, 5, 21, 4, 3, 2, 7, 8, 11, 41, 71, 51, 81, 9, 1)
+     {$t->delete($k);
+      push @s, $t->flat("After deleting $k");
+     }
+
+    my $s = join "
+", @s;
+    owf $logFile, $s if $develop;
+    is_deeply $s, <<END;
+  Start
+
+                         6                         31
+             3                       9                            61
+     1   2       4   5       7   8       11   21        41   51        71   81
+
+  After deleting 31
+
+                         6                    21
+             3                       9                       61
+     1   2       4   5       7   8       11        41   51        71   81
+
+  After deleting 61
+
+                         6                    21
+             3                       9                       71
+     1   2       4   5       7   8       11        41   51        81
+
+  After deleting 6
+
+                         7                21
+             3                   9                       71
+     1   2       4   5       8       11        41   51        81
+
+  After deleting 5
+
+                     7                21
+             3               9                       71
+     1   2       4       8       11        41   51        81
+
+  After deleting 21
+
+                                 11
+             3       7                          71
+     1   2       4       8   9        41   51        81
+
+  After deleting 4
+
+                             11
+         2       7                          71
+     1       3       8   9        41   51        81
+
+  After deleting 3
+
+                         11
+             7                          71
+     1   2       8   9        41   51        81
+
+  After deleting 2
+
+                     11
+         7                          71
+     1       8   9        41   51        81
+
+  After deleting 7
+
+                 11
+         8                      71
+     1       9        41   51        81
+
+  After deleting 8
+
+             11             71
+     1   9        41   51        81
+
+  After deleting 11
+
+             41        71
+     1   9        51        81
+
+  After deleting 41
+
+         9        71
+     1       51        81
+
+  After deleting 71
+
+             51
+     1   9        81
+
+  After deleting 51
+
+         9
+     1       81
+
+  After deleting 81
+
+     1   9
+
+  After deleting 9
+
+     1
+
+  After deleting 1
+  END
+
+
+=head2 reverseIterator($tree)
+
+Create a reverse iterator for a tree
+
+     Parameter  Description
+  1  $tree      Tree
+
+B<Example:>
+
+
+    local $numberOfKeysPerNode = 3; my $N = 64;  my $e = 0;
+
+    for my $n(0..$N)
+     {my $t = new;
+      for my $i(0..$n)
+       {$t->insert($i, $i);
+       }
+      my @n;
+
+      for(my $i = $t->reverseIterator; $i->less; $i->prev)  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
+       {push @n, $i->key;
+       }
+      ++$e unless dump(\@n) eq dump [reverse 0..$n];
+     }
+
+    is_deeply $e, 0;
+
+
+=head2 Tree::Multi::ReverseIterator::prev($iter)
+
+Find the previous key
+
+     Parameter  Description
+  1  $iter      Iterator
 
 =head2 print($tree, $i)
 
@@ -1194,7 +1492,7 @@ B<Example:>
     local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
 
     my $t = Tree::Multi::new;                                                     # Construct tree
-       $t = $t->insert($_, 2 * $_) for reverse 1..32;                             # Load tree in reverse
+       $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse
 
 
     is_deeply $t->print, <<END;  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
@@ -1252,6 +1550,10 @@ Key at this position
 
 Array of key items for this node
 
+=head4 less
+
+Iteration not yet finished
+
 =head4 more
 
 Iteration not yet finished
@@ -1293,7 +1595,7 @@ B<Example:>
 
     my $t = Tree::Multi::new;                                                     # Construct tree  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
-       $t = $t->insert($_, 2 * $_) for reverse 1..32;                             # Load tree in reverse
+       $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse
 
     is_deeply $t->print, <<END;
    15 21 27
@@ -1395,7 +1697,7 @@ Split a full root
 
 =head2 splitFullNode($node)
 
-Split a full node and return the new parent or return the existing node if it does not need to be split
+Split a full node
 
      Parameter  Description
   1  $node      Node to split
@@ -1414,12 +1716,12 @@ Split a full root that is also a leaf
      Parameter  Description
   1  $node      Node to split
 
-=head2 findAndSplit($tree, $key)
+=head2 findAndSplit($root, $key)
 
 Find a key in a tree splitting full nodes along the path to the key
 
      Parameter  Description
-  1  $tree      Tree
+  1  $root      Root of tree
   2  $key       Key
 
 =head2 indexInParent($tree)
@@ -1445,14 +1747,6 @@ Merge two adjacent nodes
   1  $n         Node to merge into
   2  $dir       Node to merge is on right if 1 else left
 
-=head2 mergeRoot($tree, $child)
-
-Merge the root node
-
-     Parameter  Description
-  1  $tree      Tree
-  2  $child     The child to merge into
-
 =head2 mergeOrFill($tree)
 
 make a node larger than a half node
@@ -1460,13 +1754,29 @@ make a node larger than a half node
      Parameter  Description
   1  $tree      Tree
 
-=head2 deleteElement($tree, $i)
+=head2 deleteLeafKey($tree, $i)
 
-Delete an element in a node
+Delete a (key, pair) in a leaf
 
      Parameter  Description
   1  $tree      Tree
   2  $i         Index to delete at
+
+=head2 deleteKey($tree, $i)
+
+Delete a (key, data) pair in a node
+
+     Parameter  Description
+  1  $tree      Tree
+  2  $i         Index to delete at
+
+=head2 flat($tree, @title)
+
+Print the keys in a tree in a flat manner
+
+     Parameter  Description
+  1  $tree      Tree
+  2  @title     Title
 
 =head2 T($tree, $expected)
 
@@ -1499,75 +1809,83 @@ Check disordered insertions
 
 1 L<delete|/delete> - Find a key in a tree, delete it, return the new tree
 
-2 L<deleteElement|/deleteElement> - Delete an element in a node
+2 L<deleteKey|/deleteKey> - Delete a (key, data) pair in a node
 
-3 L<disordered|/disordered> - Disordered insertions
+3 L<deleteLeafKey|/deleteLeafKey> - Delete a (key, pair) in a leaf
 
-4 L<disorderedCheck|/disorderedCheck> - Check disordered insertions
+4 L<depth|/depth> - Return the depth of a node within a tree
 
-5 L<fillFromLeftOrRight|/fillFromLeftOrRight> - Fill a node from the specified sibling
+5 L<disordered|/disordered> - Disordered insertions
 
-6 L<find|/find> - Find a key in a tree returning its associated data or undef if the key does not exist
+6 L<disorderedCheck|/disorderedCheck> - Check disordered insertions
 
-7 L<findAndSplit|/findAndSplit> - Find a key in a tree splitting full nodes along the path to the key
+7 L<fillFromLeftOrRight|/fillFromLeftOrRight> - Fill a node from the specified sibling
 
-8 L<full|/full> - Confirm that a node is full.
+8 L<find|/find> - Find a key in a tree returning its associated data or undef if the key does not exist
 
-9 L<halfFull|/halfFull> - Confirm that a node is half full.
+9 L<findAndSplit|/findAndSplit> - Find a key in a tree splitting full nodes along the path to the key
 
-10 L<height|/height> - Return the height of the tree
+10 L<flat|/flat> - Print the keys in a tree in a flat manner
 
-11 L<indexInParent|/indexInParent> - Get the index of a node in its parent
+11 L<full|/full> - Confirm that a node is full.
 
-12 L<insert|/insert> - Insert a key and data into a tree
+12 L<halfFull|/halfFull> - Confirm that a node is half full.
 
-13 L<iterator|/iterator> - Make an iterator for a tree
+13 L<height|/height> - Return the height of the tree
 
-14 L<leaf|/leaf> - Confirm that the tree is a leaf.
+14 L<indexInParent|/indexInParent> - Get the index of a node in its parent
 
-15 L<leftMost|/leftMost> - Return the left most node below the specified one
+15 L<insert|/insert> - Insert a key and data into a tree
 
-16 L<maximumNumberOfKeys|/maximumNumberOfKeys> - Maximum number of keys per node.
+16 L<iterator|/iterator> - Make an iterator for a tree
 
-17 L<maximumNumberOfNodes|/maximumNumberOfNodes> - Maximum number of children per parent.
+17 L<leaf|/leaf> - Confirm that the tree is a leaf.
 
-18 L<mergeOrFill|/mergeOrFill> - make a node larger than a half node
+18 L<leftMost|/leftMost> - Return the left most node below the specified one
 
-19 L<mergeRoot|/mergeRoot> - Merge the root node
+19 L<maximumNumberOfKeys|/maximumNumberOfKeys> - Maximum number of keys per node.
 
-20 L<mergeWithLeftOrRight|/mergeWithLeftOrRight> - Merge two adjacent nodes
+20 L<maximumNumberOfNodes|/maximumNumberOfNodes> - Maximum number of children per parent.
 
-21 L<minimumNumberOfKeys|/minimumNumberOfKeys> - Minimum number of keys per node.
+21 L<mergeOrFill|/mergeOrFill> - make a node larger than a half node
 
-22 L<new|/new> - Create a new multi-way tree node.
+22 L<mergeWithLeftOrRight|/mergeWithLeftOrRight> - Merge two adjacent nodes
 
-23 L<print|/print> - Print the keys in a tree optionally marking the active key
+23 L<minimumNumberOfKeys|/minimumNumberOfKeys> - Minimum number of keys per node.
 
-24 L<reUp|/reUp> - Reconnect the children to their new parent
+24 L<new|/new> - Create a new multi-way tree node.
 
-25 L<rightMost|/rightMost> - Return the right most node below the specified one
+25 L<print|/print> - Print the keys in a tree optionally marking the active key
 
-26 L<root|/root> - Return the root node of a tree.
+26 L<reUp|/reUp> - Reconnect the children to their new parent
 
-27 L<separateData|/separateData> - Return ([lower], center, [upper]) data
+27 L<reverseIterator|/reverseIterator> - Create a reverse iterator for a tree
 
-28 L<separateKeys|/separateKeys> - Return ([lower], center, [upper]) keys.
+28 L<rightMost|/rightMost> - Return the right most node below the specified one
 
-29 L<separateNode|/separateNode> - Return ([lower], [upper]) children
+29 L<root|/root> - Return the root node of a tree.
 
-30 L<splitFullNode|/splitFullNode> - Split a full node and return the new parent or return the existing node if it does not need to be split
+30 L<separateData|/separateData> - Return ([lower], center, [upper]) data
 
-31 L<splitLeafNode|/splitLeafNode> - Split a full leaf node in assuming it has a non full parent
+31 L<separateKeys|/separateKeys> - Return ([lower], center, [upper]) keys.
 
-32 L<splitNode|/splitNode> - Split a full node in half assuming it has a non full parent
+32 L<separateNode|/separateNode> - Return ([lower], [upper]) children
 
-33 L<splitRootLeafNode|/splitRootLeafNode> - Split a full root that is also a leaf
+33 L<splitFullNode|/splitFullNode> - Split a full node
 
-34 L<splitRootNode|/splitRootNode> - Split a full root
+34 L<splitLeafNode|/splitLeafNode> - Split a full leaf node in assuming it has a non full parent
 
-35 L<T|/T> - Write a result to the log file
+35 L<splitNode|/splitNode> - Split a full node in half assuming it has a non full parent
 
-36 L<Tree::Multi::Iterator::next|/Tree::Multi::Iterator::next> - Find the next key
+36 L<splitRootLeafNode|/splitRootLeafNode> - Split a full root that is also a leaf
+
+37 L<splitRootNode|/splitRootNode> - Split a full root
+
+38 L<T|/T> - Write a result to the log file
+
+39 L<Tree::Multi::Iterator::next|/Tree::Multi::Iterator::next> - Find the next key
+
+40 L<Tree::Multi::ReverseIterator::prev|/Tree::Multi::ReverseIterator::prev> - Find the previous key
 
 =head1 Installation
 
@@ -1622,7 +1940,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 154;
+ {plan tests => 155;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -2422,13 +2740,15 @@ END
  }
 
 if (!$develop) {
-  my $K = 9; my $N = 256;
+  my $K = 9; my $N = 256; my $e = 0;
   for   my $k(3..$K)
    {for my $n(0..$N)
      {my $t = disordered($k, $n);
-      disorderedCheck($t, $k, $n);
+      ++$e unless disorderedCheck($t, $k, $n);
      }
    }
+  is_deeply $e, 0;
  }
+else { ok 1}
 
 lll "Success:", time - $start;
