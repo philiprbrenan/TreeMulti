@@ -262,7 +262,7 @@ sub findAndSplit($$)                                                            
        }
      }
    }
-  confess 'Not possible';
+  confess "Should not happen";
  }
 
 sub find($$)                                                                    # Find a key in a tree returning its associated data or undef if the key does not exist
@@ -293,7 +293,7 @@ sub find($$)                                                                    
        }
      }
    }
-  confess 'Not possible';
+  confess "Should not happen";
  }
 
 sub indexInParent($)                                                            #P Get the index of a node in its parent
@@ -315,7 +315,7 @@ sub fillFromLeftOrRight($$)                                                     
 
   confess unless    halfFull($n);                                               # Confirm leaf is half full
   confess unless my $p = $n->up;                                                # Parent of leaf
-  my $i = indexInParent $n;                                                   # Index of leaf in parent
+  my $i = indexInParent $n;                                                     # Index of leaf in parent
 
   if ($dir)                                                                     # Fill from right
    {$i < $p->node->@* - 1 or confess;                                           # Cannot fill from right
@@ -517,7 +517,7 @@ sub delete($$)                                                                  
      }
    }
 
-  confess 'Not possible';
+  confess "Should not happen";
  }
 
 sub insert($$$)                                                                 # Insert a key and data into a tree
@@ -1949,7 +1949,7 @@ END
    }
  }
 
-if (1) {
+if (1) {                                                                        # Large number of keys per node
   local $numberOfKeysPerNode = 15;
 
   my $t = new; my $N = 256;
@@ -2501,6 +2501,21 @@ if (1) {                                                                        
   is_deeply $e, 0;
  }
 
+if (1) {                                                                        #Theight #Tdepth #Tsize
+  local $Tree::Multi::numberOfKeysPerNode = 3;
+  my $t = new;      ok $t->height == 0; ok $t->leftMost->depth == 0; ok $t->size == 0;
+  $t->insert(1, 1); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 1;
+  $t->insert(2, 2); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 2;
+  $t->insert(3, 3); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 3;
+  $t->insert(4, 4); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 4;
+ }
+
+if (1) {                                                                        # Even number of keys
+  my $t = new;
+  $t = disordered(       4, 256);
+  ok disorderedCheck($t, 4, 256);
+ }
+
 if (1) {                                                                        # Even number of keys
   my $t = disordered(4, 64);
 
@@ -2531,22 +2546,7 @@ if (1) {                                                                        
 END
  }
 
-if (1) {                                                                        # Even number of keys
-  my $t = new;
-  $t = disordered(       4, 256);
-  ok disorderedCheck($t, 4, 256);
- }
-
-if (1) {                                                                        #Theight #Tdepth #Tsize
-  local $Tree::Multi::numberOfKeysPerNode = 3;
-  my $t = new;      ok $t->height == 0; ok $t->leftMost->depth == 0; ok $t->size == 0;
-  $t->insert(1, 1); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 1;
-  $t->insert(2, 2); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 2;
-  $t->insert(3, 3); ok $t->height == 1; ok $t->leftMost->depth == 1; ok $t->size == 3;
-  $t->insert(4, 4); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 4;
- }
-
-if (1) {
+if (1) {                                                                        # Deleting interior nodes
   my $k = 3;  my $n = 18;
   my $t = disordered  $k, $n;
   my @s;
@@ -2656,7 +2656,7 @@ After deleting 1
 END
  }
 
-ok &randomCheck(3, $develop ? (2, 1) : (2, 3));                                  # Randomize and check against a Perl hash
+ok &randomCheck(3, $develop ? (2, 1) : (2, 3));                                 # Randomize and check against a Perl hash
 ok &randomCheck(4, $develop ? (2, 1) : (2, 3));
 ok &randomCheck(5, $develop ? (2, 1) : (2, 2));
 ok &randomCheck(6, $develop ? (2, 1) : (2, 2));
@@ -2706,4 +2706,4 @@ END
   ok $t->find(17) == 34 && $t->size == 1;                                       # Size
  }
 
-lll "Success:", time - $start;
+lll "Success:", sprintf("%5.2f seconds", time - $start);
