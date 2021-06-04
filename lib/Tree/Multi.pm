@@ -127,52 +127,29 @@ sub reUp($@)                                                                    
 sub splitFullNode($)                                                            #P Split a node, that is not a leaf, if it is full
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
-  return unless $node->node->@* == maximumNumberOfNodes;                        # Only split the node if it is full
-
-  my ($kl, $k, $kr) = separateKeys $node;
-  my ($dl, $d, $dr) = separateData $node;
-  my ($cl, $cr)     = separateNode $node;
-
-  my ($l, $r) = (new, new);                                                     # New child nodes
-  $l->keys = $kl; $l->data = $dl; $l->node = $cl; reUp $l, @$cl;
-  $r->keys = $kr; $r->data = $dr; $r->node = $cr; reUp $r, @$cr;
-
-  if (my $p = $node->up)                                                        # Not a root node
-   {$l->up  = $r->up = $p;
-    my @n = $p->node->@*;                                                       # Insert new nodes in parent known to be not full
-    for my $i(keys @n)
-     {if ($n[$i] == $node)
-       {splice $p->keys->@*, $i, 0, $k;
-        splice $p->data->@*, $i, 0, $d;
-        splice $p->node->@*, $i, 1, $l, $r;
-        return;
-       }
-     }
-    confess;
+  if ($node->node->@*)
+   {return unless $node->node->@* == maximumNumberOfNodes;                        # Only split the node if it is full
    }
-  else                                                                          # Root node
-   {$l->up = $r->up = $node;
-    $node->keys = [$k];
-    $node->data = [$d];
-    $node->node = [$l, $r];
+  else
+   {return unless $node->keys->@* > maximumNumberOfKeys;                          # Split because the leaf has got too big
    }
- }
-
-sub splitLeaf($)                                                                #P Split an over full leaf node
- {my ($node) = @_;                                                              # Node to split
-  @_ == 1 or confess;
-  return unless $node->keys->@* > maximumNumberOfKeys;                          # Split because the leaf has got too big
 
   my ($kl, $k, $kr) = separateKeys $node;
   my ($dl, $d, $dr) = separateData $node;
 
-  my ($p, $l, $r) = ($node->up // $node, new, new);                             # Create new nodes
-  $l->up   = $r->up        = $p;
+  my ($p, $l, $r) = ($node->up // $node, new, new);                             # New child nodes
+  $l->up  = $r->up = $p;
   $l->keys = $kl; $l->data = $dl;
   $r->keys = $kr; $r->data = $dr;
 
+  if ($node->node->@*)
+   {my ($cl, $cr)     = separateNode $node;
+    $l->node = $cl; reUp $l, @$cl;
+    $r->node = $cr; reUp $r, @$cr;
+   }
+
   if ($p != $node)                                                              # Not a root node
-   {my @n = $p->node->@*;
+   {my @n = $p->node->@*;                                                       # Insert new nodes in parent known to be not full
     for my $i(keys @n)
      {if ($n[$i] == $node)
        {splice $p->keys->@*, $i, 0, $k;
@@ -184,9 +161,9 @@ sub splitLeaf($)                                                                
     confess;
    }
   else                                                                          # Root node
-   {$p->keys = [$k];
-    $p->data = [$d];
-    $p->node = [$l, $r];
+   {$node->keys = [$k];
+    $node->data = [$d];
+    $node->node = [$l, $r];
    }
  }
 
@@ -513,7 +490,7 @@ sub insert($$$)                                                                 
     $node->data = [@d[0..$index], $data, @d[$index+1..$#d]];
    }
 
-  splitLeaf $node                                                               # Split if the leaf has got too big
+  splitFullNode $node                                                               # Split if the leaf has got too big
  }
 
 sub iterator($)                                                                 # Make an iterator for a tree.
