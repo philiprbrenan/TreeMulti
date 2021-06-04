@@ -127,11 +127,12 @@ sub reUp($@)                                                                    
 sub splitFullNode($)                                                            #P Split a node, that is not a leaf, if it is full
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
-  if ($node->node->@*)
-   {return unless $node->node->@* == maximumNumberOfNodes;                        # Only split the node if it is full
+
+  if (my @n = $node->node->@*)                                                  # Not a leaf node
+   {return unless @n == maximumNumberOfNodes;                                   # Only split the node if it is full
    }
-  else
-   {return unless $node->keys->@* > maximumNumberOfKeys;                          # Split because the leaf has got too big
+  else                                                                          # Split because the leaf has got too big
+   {return unless $node->keys->@* > maximumNumberOfKeys;
    }
 
   my ($kl, $k, $kr) = separateKeys $node;
