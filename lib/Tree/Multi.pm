@@ -139,11 +139,11 @@ sub splitFullNode($)                                                            
   my ($dl, $d, $dr) = separateData $node;
 
   my ($p, $l, $r) = ($node->up // $node, new, new);                             # New child nodes
-  $l->up  = $r->up = $p;
+  $l->up   = $r->up = $p;
   $l->keys = $kl; $l->data = $dl;
   $r->keys = $kr; $r->data = $dr;
 
-  if ($node->node->@*)
+  if ($node->node->@*)                                                          # Not a leaf node
    {my ($cl, $cr)     = separateNode $node;
     $l->node = $cl; reUp $l, @$cl;
     $r->node = $cr; reUp $r, @$cr;
