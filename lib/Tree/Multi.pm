@@ -2740,7 +2740,7 @@ END
  }
 
 if (!$develop) {
-  my $K = 9; my $N = 256; my $e = 0;
+  my $K = 9; my $N = 512; my $e = 0;
   for   my $k(3..$K)
    {for my $n(0..$N)
      {my $t = disordered($k, $n);
