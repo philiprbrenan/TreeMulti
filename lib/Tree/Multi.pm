@@ -769,7 +769,8 @@ Tree::Multi - Multi-way tree in Pure Perl with an even or odd number of keys per
 
 Construct and query a multi-way tree in B<100%> Pure Perl with a choice of an
 odd or an even numbers of keys per node:
-  local $Tree::Multi::numberOfKeysPerNode = 4;                                  # Number of keys per node - can be even
+
+  local $Tree::Multi::numberOfKeysPerNode = 4;  # Number of keys per node - can be even
 
   my $t = Tree::Multi::new;                     # Construct tree
      $t->insert($_, 2 * $_) for reverse 1..32;  # Load tree in reverse
@@ -936,26 +937,22 @@ B<Example:>
        31 32
   END
 
+    ok  $t->size       == 32;                                                     # Size
     ok  $t->height     ==  3;                                                     # Height
-
-
-    ok  $t->find  (16) == 32;                                                     # Find by key  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
-
-        $t->delete(16);                                                           # Delete a key
+    ok  $t->delete(16) == 2 * 16;                                                 # Delete a key
 
     ok !$t->find  (16);                                                           # Key no longer present  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
 
-
-
     ok  $t->find  (17) == 34;                                                     # Find by key  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+
 
     my @k;
     for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
      {push @k, $i->key unless $i->key == 17;
      }
 
-    $t->delete($_) for @k;                                                        # Delete
+    ok $t->delete($_) == 2 * $_ for @k;                                           # Delete
 
 
     ok $t->find(17) == 34 && $t->size == 1;                                       # Size  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
@@ -1134,7 +1131,7 @@ B<Example:>
 
 =head2 delete($root, $key)
 
-Find a key in a tree, delete it, return the new tree
+Find a key in a tree, delete it and return any associated data.
 
      Parameter  Description
   1  $root      Tree root
@@ -1167,23 +1164,21 @@ B<Example:>
        31 32
   END
 
+    ok  $t->size       == 32;                                                     # Size
     ok  $t->height     ==  3;                                                     # Height
 
-    ok  $t->find  (16) == 32;                                                     # Find by key
-
-        $t->delete(16);                                                           # Delete a key  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+    ok  $t->delete(16) == 2 * 16;                                                 # Delete a key  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
     ok !$t->find  (16);                                                           # Key no longer present
-
-
     ok  $t->find  (17) == 34;                                                     # Find by key
+
     my @k;
     for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
      {push @k, $i->key unless $i->key == 17;
      }
 
 
-    $t->delete($_) for @k;                                                        # Delete  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
+    ok $t->delete($_) == 2 * $_ for @k;                                           # Delete  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
 
 
     ok $t->find(17) == 34 && $t->size == 1;                                       # Size
@@ -1227,20 +1222,18 @@ B<Example:>
        31 32
   END
 
+    ok  $t->size       == 32;                                                     # Size
     ok  $t->height     ==  3;                                                     # Height
-
-    ok  $t->find  (16) == 32;                                                     # Find by key
-        $t->delete(16);                                                           # Delete a key
+    ok  $t->delete(16) == 2 * 16;                                                 # Delete a key
     ok !$t->find  (16);                                                           # Key no longer present
-
-
     ok  $t->find  (17) == 34;                                                     # Find by key
+
     my @k;
     for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
      {push @k, $i->key unless $i->key == 17;
      }
 
-    $t->delete($_) for @k;                                                        # Delete
+    ok $t->delete($_) == 2 * $_ for @k;                                           # Delete
 
     ok $t->find(17) == 34 && $t->size == 1;                                       # Size
 
@@ -1291,14 +1284,12 @@ B<Example:>
        31 32
   END
 
+    ok  $t->size       == 32;                                                     # Size
     ok  $t->height     ==  3;                                                     # Height
-
-    ok  $t->find  (16) == 32;                                                     # Find by key
-        $t->delete(16);                                                           # Delete a key
+    ok  $t->delete(16) == 2 * 16;                                                 # Delete a key
     ok !$t->find  (16);                                                           # Key no longer present
-
-
     ok  $t->find  (17) == 34;                                                     # Find by key
+
     my @k;
 
     for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator  # 𝗘𝘅𝗮𝗺𝗽𝗹𝗲
@@ -1306,7 +1297,7 @@ B<Example:>
      {push @k, $i->key unless $i->key == 17;
      }
 
-    $t->delete($_) for @k;                                                        # Delete
+    ok $t->delete($_) == 2 * $_ for @k;                                           # Delete
 
     ok $t->find(17) == 34 && $t->size == 1;                                       # Size
 
@@ -1457,20 +1448,18 @@ B<Example:>
        31 32
   END
 
+    ok  $t->size       == 32;                                                     # Size
     ok  $t->height     ==  3;                                                     # Height
-
-    ok  $t->find  (16) == 32;                                                     # Find by key
-        $t->delete(16);                                                           # Delete a key
+    ok  $t->delete(16) == 2 * 16;                                                 # Delete a key
     ok !$t->find  (16);                                                           # Key no longer present
-
-
     ok  $t->find  (17) == 34;                                                     # Find by key
+
     my @k;
     for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
      {push @k, $i->key unless $i->key == 17;
      }
 
-    $t->delete($_) for @k;                                                        # Delete
+    ok $t->delete($_) == 2 * $_ for @k;                                           # Delete
 
     ok $t->find(17) == 34 && $t->size == 1;                                       # Size
 
@@ -1616,20 +1605,18 @@ B<Example:>
        31 32
   END
 
+    ok  $t->size       == 32;                                                     # Size
     ok  $t->height     ==  3;                                                     # Height
-
-    ok  $t->find  (16) == 32;                                                     # Find by key
-        $t->delete(16);                                                           # Delete a key
+    ok  $t->delete(16) == 2 * 16;                                                 # Delete a key
     ok !$t->find  (16);                                                           # Key no longer present
-
-
     ok  $t->find  (17) == 34;                                                     # Find by key
+
     my @k;
     for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
      {push @k, $i->key unless $i->key == 17;
      }
 
-    $t->delete($_) for @k;                                                        # Delete
+    ok $t->delete($_) == 2 * $_ for @k;                                           # Delete
 
     ok $t->find(17) == 34 && $t->size == 1;                                       # Size
 
@@ -1767,7 +1754,7 @@ make a node larger than a half node
 
 =head2 deleteLeafKey($tree, $i)
 
-Delete a (key, pair) in a leaf
+Delete a key in a leaf.
 
      Parameter  Description
   1  $tree      Tree
@@ -1775,7 +1762,7 @@ Delete a (key, pair) in a leaf
 
 =head2 deleteKey($tree, $i)
 
-Delete a (key, data) pair in a node
+Delete a key
 
      Parameter  Description
   1  $tree      Tree
@@ -1819,11 +1806,11 @@ Random insertions
 =head1 Index
 
 
-1 L<delete|/delete> - Find a key in a tree, delete it, return the new tree
+1 L<delete|/delete> - Find a key in a tree, delete it and return any associated data.
 
-2 L<deleteKey|/deleteKey> - Delete a (key, data) pair in a node
+2 L<deleteKey|/deleteKey> - Delete a key
 
-3 L<deleteLeafKey|/deleteLeafKey> - Delete a (key, pair) in a leaf
+3 L<deleteLeafKey|/deleteLeafKey> - Delete a key in a leaf.
 
 4 L<depth|/depth> - Return the depth of a node within a tree
 
