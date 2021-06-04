@@ -159,7 +159,7 @@ sub splitFullNode($)                                                            
         return;
        }
      }
-    confess;
+    confess "Should not happen";
    }
   else                                                                          # Root node
    {$node->keys = [$k];
