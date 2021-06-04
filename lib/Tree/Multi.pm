@@ -158,51 +158,36 @@ sub splitFullNode($)                                                            
    }
  }
 
-sub splitLeafNode($)                                                            #P Split a full leaf node in assuming it has a non full parent.
+sub splitLeaf($)                                                                #P Split an over full leaf node
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
-
-  confess unless my $p = $node->up;                                             # Check parent
-  confess unless $node->keys->@* == maximumNumberOfKeys + 1;                    # Check size - should be one greater than allowed - that is why we are splitting it.
+  return unless $node->keys->@* > maximumNumberOfKeys;                          # Split because the leaf has got too big
 
   my ($kl, $k, $kr) = separateKeys $node;
   my ($dl, $d, $dr) = separateData $node;
 
-  my ($l, $r)     = (new, new);                                                 # Create new nodes
+  my ($p, $l, $r) = ($node->up // $node, new, new);                             # Create new nodes
   $l->up   = $r->up        = $p;
   $l->keys = $kl; $l->data = $dl;
   $r->keys = $kr; $r->data = $dr;
 
-  my @n = $p->node->@*;                                                         # Insert new nodes in parent known to be not full
-  for my $i(keys @n)
-   {if ($n[$i] == $node)
-     {splice $p->keys->@*, $i, 0, $k;
-      splice $p->data->@*, $i, 0, $d;
-      splice $p->node->@*, $i, 1, $l, $r;
-      return;                                                                   # Return parent as we have delete the original node
+  if ($p != $node)                                                              # Not a root node
+   {my @n = $p->node->@*;
+    for my $i(keys @n)
+     {if ($n[$i] == $node)
+       {splice $p->keys->@*, $i, 0, $k;
+        splice $p->data->@*, $i, 0, $d;
+        splice $p->node->@*, $i, 1, $l, $r;
+        return;
+       }
      }
+    confess;
    }
-  confess;
- }
-
-sub splitRootLeafNode($)                                                        #P Split a full root that is also a leaf.
- {my ($node) = @_;                                                              # Node to split
-  @_ == 1 or confess;
-
-  confess if $node->up;                                                         # Check parent
-  confess unless $node->keys->@* == maximumNumberOfNodes;                       # Check size
-
-  my ($kl, $k, $kr) = separateKeys $node;
-  my ($dl, $d, $dr) = separateData $node;
-
-  my ($p, $l, $r) = ($node, new, new);                                          # New root and children
-  $l->up   = $r->up        = $p;                                                # Initialize children
-  $l->keys = $kl; $l->data = $dl;
-  $r->keys = $kr; $r->data = $dr;
-
-  $p->keys = [$k];                                                              # Initialize parent
-  $p->data = [$d];
-  $p->node = [$l, $r];
+  else                                                                          # Root node
+   {$p->keys = [$k];
+    $p->data = [$d];
+    $p->node = [$l, $r];
+   }
  }
 
 sub findAndSplit($$)                                                            #P Find a key in a tree splitting full nodes along the path to the key.
@@ -528,14 +513,7 @@ sub insert($$$)                                                                 
     $node->data = [@d[0..$index], $data, @d[$index+1..$#d]];
    }
 
-  if ($node->keys->@* > maximumNumberOfKeys)                                    # Split because the node has got too big
-   {if ($node->up)                                                              # Split leaf node that is not the root
-     {splitLeafNode $node;
-     }
-    else
-     {splitRootLeafNode $node                                                   # Split Root node
-     }
-   }
+  splitLeaf $node                                                               # Split if the leaf has got too big
  }
 
 sub iterator($)                                                                 # Make an iterator for a tree.
