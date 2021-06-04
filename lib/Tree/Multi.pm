@@ -121,9 +121,7 @@ sub reUp($@)                                                                    
  {my ($node, @children) = @_;                                                   # Node, children
   @_ > 0 or confess;
 
-  for my $c(@children)                                                          # Add new child to parent known to be not full
-   {$c->up = $node;
-   }
+  $_->up = $node for @children;                                                 # Add new child to parent known to be not full
  }
 
 sub splitNode($)                                                                #P Split a full node in half assuming it has a non full parent
@@ -139,8 +137,8 @@ sub splitNode($)                                                                
 
   my ($l, $r) = (new, new);                                                     # New child nodes
   $l->up   = $r->up = $p;
-  $l->keys = $kl; $l->data = $dl; $l->node = $cl; reUp($l, @$cl);
-  $r->keys = $kr; $r->data = $dr; $r->node = $cr; reUp($r, @$cr);
+  $l->keys = $kl; $l->data = $dl; $l->node = $cl; reUp $l, @$cl;
+  $r->keys = $kr; $r->data = $dr; $r->node = $cr; reUp $r, @$cr;
 
   my @n = $p->node->@*;                                                         # Insert new nodes in parent known to be not full
   for my $i(keys @n)
@@ -167,9 +165,9 @@ sub splitRootNode($)                                                            
 
   my $p = $node;
   my ($l, $r)     = (new, new);
-  $l->up = $r->up = $p;
-  $l->keys = $kl; $l->data = $dl; $l->node = $cl; reUp($l, @$cl);
-  $r->keys = $kr; $r->data = $dr; $r->node = $cr; reUp($r, @$cr);
+  $l->up   = $r->up = $p;
+  $l->keys = $kl; $l->data = $dl; $l->node = $cl; reUp $l, @$cl;
+  $r->keys = $kr; $r->data = $dr; $r->node = $cr; reUp $r, @$cr;
 
   $p->keys = [$k];
   $p->data = [$d];
@@ -274,7 +272,7 @@ sub find($$)                                                                    
   my $tree = $root;                                                             # Start at the root
 
   for(0..999)                                                                   # Step down through the tree
-   {return undef unless my @k = $tree->keys->@*;                                # Empty node
+   {return undef unless my @k   = $tree->keys->@*;                              # Empty node
 
     if ($key < $k[0])                                                           # Less than smallest key in node
      {return undef unless $tree = $tree->node->[0];
@@ -296,13 +294,14 @@ sub find($$)                                                                    
      }
    }
   confess 'Not possible';
- } # find
+ }
 
 sub indexInParent($)                                                            #P Get the index of a node in its parent
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
   my $p = $tree->up;
   confess unless defined $p;
+
   my @n = $p->node->@*;
   for my $i(keys @n)
    {return $i if $n[$i] == $tree;
@@ -314,16 +313,16 @@ sub fillFromLeftOrRight($$)                                                     
  {my ($n, $dir) = @_;                                                           # Node to fill, node to fill from 0 for left or 1 for right
   @_ == 2 or confess;
 
-  confess unless    $n->halfFull;                                               # Confirm leaf is half full
+  confess unless    halfFull($n);                                               # Confirm leaf is half full
   confess unless my $p = $n->up;                                                # Parent of leaf
-  my $i = $n->indexInParent;                                                    # Index of leaf in parent
+  my $i = indexInParent $n;                                                   # Index of leaf in parent
 
   if ($dir)                                                                     # Fill from right
    {$i < $p->node->@* - 1 or confess;                                           # Cannot fill from right
     my $r = $p->node->[$i+1];                                                   # Leaf on right
     push $n->keys->@*, $p->keys->[$i]; $p->keys->[$i] = shift $r->keys->@*;     # Transfer key
     push $n->data->@*, $p->data->[$i]; $p->data->[$i] = shift $r->data->@*;     # Transfer data
-    if (!$n->leaf)                                                              # Transfer node if not a leaf
+    if (!leaf $n)                                                               # Transfer node if not a leaf
      {push $n->node->@*, shift $r->node->@*;
       $n->node->[-1]->up = $n;
      }
@@ -333,7 +332,7 @@ sub fillFromLeftOrRight($$)                                                     
     my $l = $p->node->[$i-1];                                                   # Leaf on leaf
     unshift $n->keys->@*, $p->keys->[$i-1];$p->keys->[$i-1] = pop $l->keys->@*; # Transfer key
     unshift $n->data->@*, $p->data->[$i-1];$p->data->[$i-1] = pop $l->data->@*; # Transfer data
-    if (!$n->leaf)                                                              # Transfer node if not a leaf
+    if (!leaf $n)                                                               # Transfer node if not a leaf
      {unshift $n->node->@*, pop $l->node->@*;
       $n->node->[0]->up = $n;
      }
@@ -344,33 +343,33 @@ sub mergeWithLeftOrRight($$)                                                    
  {my ($n, $dir) = @_;                                                           # Node to merge into, node to merge is on right if 1 else left
   @_ == 2 or confess;
 
-  confess unless    $n->halfFull;                                               # Confirm leaf is half full
+  confess unless    halfFull($n);                                               # Confirm leaf is half full
   confess unless my $p = $n->up;                                                # Parent of leaf
-  confess if        $p->halfFull and $p->up;                                    # Parent must have more than the minimum number of keys because we need to remove one unless it is the root of the tree
+  confess if        halfFull($p) and $p->up;                                    # Parent must have more than the minimum number of keys because we need to remove one unless it is the root of the tree
 
-  my $i = $n->indexInParent;                                                    # Index of leaf in parent
+  my $i = indexInParent $n;                                                     # Index of leaf in parent
 
   if ($dir)                                                                     # Merge with right hand sibling
    {$i < $p->node->@* - 1 or confess;                                           # Cannot fill from right
     my $r = $p->node->[$i+1];                                                   # Leaf on right
-    confess unless $r->halfFull;                                                # Confirm right leaf is half full
+    confess unless halfFull($r);                                                # Confirm right leaf is half full
     push $n->keys->@*, splice($p->keys->@*, $i, 1), $r->keys->@*;               # Transfer keys
     push $n->data->@*, splice($p->data->@*, $i, 1), $r->data->@*;               # Transfer data
-    if (!$n->leaf)                                                              # Children of merged node
+    if (!leaf $n)                                                               # Children of merged node
      {push $n->node->@*, $r->node->@*;                                          # Children of merged node
-      $_->up = $n for $r->node->@*;                                             # Update parent of children of right node
+      reUp $n, $r->node->@*;                                                    # Update parent of children of right node
      }
     splice $p->node->@*, $i+1, 1;                                               # Remove link from parent to right child
    }
   else                                                                          # Merge with left hand sibling
    {$i > 0 or confess;                                                          # Cannot fill from left
     my $l = $p->node->[$i-1];                                                   # Node on left
-    confess unless $l->halfFull;                                                # Confirm right leaf is half full
+    confess unless halfFull($l);                                                # Confirm right leaf is half full
     unshift $n->keys->@*, $l->keys->@*, splice $p->keys->@*, $i-1, 1;           # Transfer keys
     unshift $n->data->@*, $l->data->@*, splice $p->data->@*, $i-1, 1;           # Transfer data
-    if (!$n->leaf)                                                              # Children of merged node
+    if (!leaf $n)                                                               # Children of merged node
      {unshift $n->node->@*, $l->node->@*;                                       # Children of merged node
-      $_->up = $n for $l->node->@*;                                             # Update parent of children of left node
+      reUp $n, $l->node->@*;                                                    # Update parent of children of left node
      }
     splice $p->node->@*, $i-1, 1;                                               # Remove link from parent to left child
    }
@@ -380,34 +379,34 @@ sub mergeOrFill($)                                                              
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
 
-  return  unless $tree->halfFull;                                               # No need to merge of if not a half node
+  return  unless halfFull($tree);                                               # No need to merge of if not a half node
   confess unless my $p = $tree->up;                                             # Parent exists
 
   __SUB__->($p) if $p->up;                                                      # Parent is half node so can be merged or filled first
 
-  if (!$p->up and $p->keys->@* == 1 and $p->node->[0]->halfFull                 # Parent is the root and it only has one key - merge into the child
-                                    and $p->node->[1]->halfFull)
+  if (!$p->up and $p->keys->@* == 1 and halfFull($p->node->[0])                 # Parent is the root and it only has one key - merge into the child
+                                    and halfFull($p->node->[1]))
    {my $l = $p->node->[0];                                                      # Merge the root node
     my $r = $p->node->[1];
     $p->keys = $tree->keys = [$l->keys->@*, $p->keys->@*, $r->keys->@*];
     $p->data = $tree->data = [$l->data->@*, $p->data->@*, $r->data->@*];
     $p->node = $tree->node = [$l->node->@*,               $r->node->@*];
 
-    reUp($p, $p->node->@*);
+    reUp $p, $p->node->@*;
 
     return;
    }
 
-  if (my $i = $tree->indexInParent)                                             # Merge with left node
+  if (my $i = indexInParent $tree)                                              # Merge with left node
    {my $l = $tree->up->node->[$i-1];                                            # Left node
-    if ((my $r = $tree)->halfFull)
-     {$l->halfFull ? $r->mergeWithLeftOrRight(0) : $r->fillFromLeftOrRight(0);  # Merge as left and right nodes are half full
+    if (halfFull(my $r = $tree))
+     {$l->halfFull ? mergeWithLeftOrRight $r, 0 : fillFromLeftOrRight $r, 0;    # Merge as left and right nodes are half full
      }
    }
   else                                                                          # Merge with right node
    {my $r = $p->node->[1];                                                      # Right node
-    if ((my $l = $tree)->halfFull)
-     {$r->halfFull ? $l->mergeWithLeftOrRight(1) : $l->fillFromLeftOrRight(1);  # Merge as left and right nodes are half full
+    if (halfFull(my $l = $tree))
+     {halfFull($r) ? mergeWithLeftOrRight $l, 1 : fillFromLeftOrRight $l, 1;    # Merge as left and right nodes are half full
      }
    }
  }
@@ -415,8 +414,8 @@ sub mergeOrFill($)                                                              
 sub leftMost($)                                                                 # Return the left most node below the specified one
  {my ($tree) = @_;                                                              # Tree
   for(0..999)                                                                   # Step down through tree
-   {return $tree if $tree->leaf;                                                # We are on a leaf so we have arrived at the left most node
-    $tree = $tree->node->[0]->leftMost;                                         # Go left
+   {return $tree if leaf $tree;                                                 # We are on a leaf so we have arrived at the left most node
+    $tree = $tree->node->[0];                                                   # Go left
    }
   confess "Should not happen";
  }
@@ -424,8 +423,8 @@ sub leftMost($)                                                                 
 sub rightMost($)                                                                # Return the right most node below the specified one
  {my ($tree) = @_;                                                              # Tree
   for(0..999)                                                                   # Step down through tree
-   {return $tree if $tree->leaf;                                                # We are on a leaf so we have arrived at the left most node
-    $tree = $tree->node->[-1]->rightMost;                                       # Go right
+   {return $tree if leaf $tree;                                                 # We are on a leaf so we have arrived at the left most node
+    $tree = $tree->node->[-1];                                                  # Go right
    }
   confess "Should not happen";
  }
@@ -433,8 +432,8 @@ sub rightMost($)                                                                
 sub height($)                                                                   # Return the height of the tree
  {my ($tree) = @_;                                                              # Tree
   for my $n(0..999)                                                             # Step down through tree
-   {if ($tree->leaf)                                                            # We are on a leaf
-     {return $n + 1 if $tree->leaf && $tree->keys->@*;                          # We are in a partially full leaf
+   {if (leaf $tree)                                                             # We are on a leaf
+     {return $n + 1 if $tree->keys->@*;                                         # We are in a partially full leaf
       return $n;                                                                # We are on the root and it is empty
      }
     $tree = $tree->node->[0];
@@ -455,9 +454,9 @@ sub depth($)                                                                    
 sub deleteLeafKey($$)                                                           #P Delete a (key, pair) in a leaf
  {my ($tree, $i) = @_;                                                          # Tree, index to delete at
   @_ == 2 or confess;
-  confess "Not a leaf" unless $tree->leaf;
+  confess "Not a leaf" unless leaf $tree;
   my $key = $tree->keys->[$i];
-  mergeOrFill($tree) if $tree->up;                                              # Merge and fill unless we are on the root and the root is a leaf
+  mergeOrFill $tree if $tree->up;                                               # Merge and fill unless we are on the root and the root is a leaf
   for my $j(keys $tree->keys->@*)
    {if ($tree->keys->[$j] == $key)
      {splice $tree->keys->@*, $j, 1;                                            # Remove keys
@@ -470,20 +469,20 @@ sub deleteLeafKey($$)                                                           
 sub deleteKey($$)                                                               #P Delete a (key, data) pair in a node
  {my ($tree, $i) = @_;                                                          # Tree, index to delete at
   @_ == 2 or confess;
-  if ($tree->leaf)                                                              # Delete from a leaf
+  if (leaf $tree)                                                               # Delete from a leaf
    {deleteLeafKey($tree, $i);
    }
   elsif ($i > 0)                                                                # Delete from a node
-   {my $l = $tree->node->[$i]->rightMost;                                       # Find previous node
+   {my $l = rightMost $tree->node->[$i];                                        # Find previous node
     splice  $tree->keys->@*, $i, 1, $l->keys->[-1];
     splice  $tree->data->@*, $i, 1, $l->data->[-1];
-    deleteLeafKey($l, -1 + scalar $l->keys->@*);                                # Remove leaf key
+    deleteLeafKey $l, -1 + scalar $l->keys->@*;                                 # Remove leaf key
    }
   else                                                                          # Delete from a node
-   {my $r = $tree->node->[1]->leftMost;                                         # Find previous node
+   {my $r = leftMost $tree->node->[1];                                          # Find previous node
     splice  $tree->keys->@*,  0, 1, $r->keys->[0];
     splice  $tree->data->@*,  0, 1, $r->data->[0];
-    deleteLeafKey($r, 0);                                                       # Remove leaf key
+    deleteLeafKey $r, 0;                                                        # Remove leaf key
    }
  }
 
@@ -508,7 +507,7 @@ sub delete($$)                                                                  
     for my $i(keys @k)                                                          # Search the keys in this node
      {my  $s = $key <=> $k[$i];                                                 # Compare key
       if ($s == 0)                                                              # Delete found key
-       {deleteKey($tree, $i);                                                   # Delete
+       {deleteKey $tree, $i;                                                    # Delete
         return;                                                                 # New tree
        }
       if ($s < 0)                                                               # Less than current key
@@ -519,7 +518,7 @@ sub delete($$)                                                                  
    }
 
   confess 'Not possible';
- } # delete
+ }
 
 sub insert($$$)                                                                 # Insert a key and data into a tree
  {my ($tree, $key, $data) = @_;                                                 # Tree, key, data
@@ -527,13 +526,13 @@ sub insert($$$)                                                                 
 
   $tree or confess;
 
-  if (!$tree->keys->@*)                                                         # Empty tree
+  if (  !$tree->keys->@*)                                                       # Empty tree
    {push $tree->keys->@*, $key;
     push $tree->data->@*, $data;
     return $tree;
    }
 
-  my ($compare, $node, $index) = findAndSplit($tree, $key);                     # Check for existing key
+  my ($compare, $node, $index) = findAndSplit $tree, $key;                      # Check for existing key
 
   if ($compare == 0)                                                            # Found an equal key whose data we can update
    {$node->data->[$index] = $data;
@@ -601,21 +600,26 @@ sub Tree::Multi::Iterator::next($)                                              
 
   my $up = sub                                                                  # Iterate up to next node that has not been visited
    {for(my $n = $C; my $p = $n->up; $n = $n->up)
-     {my $i = $n->indexInParent;
+     {my $i = indexInParent $n;
       return &$new($p, $i) if $i < $p->keys->@*;
      }
     &$done                                                                      # No nodes not visited
    };
 
   my $i = ++$iter->pos;
-  $C->leaf ? ($i < $C->keys->@* ? &$new($C, $i)                   : &$up)       # Leaf
-           : ($i < $C->node->@* ? &$new($C->node->[$i]->leftMost) : &$up)       # Node
+  if (leaf $C)                                                                  # Leaf
+   {$i < $C->keys->@* ? &$new($C, $i) : &$up;
+   }
+  else                                                                          # Node
+   {$i < $C->node->@* ? &$new($C->node->[$i]->leftMost) : &$up;
+   }
  }
+
 sub reverseIterator($)                                                          # Create a reverse iterator for a tree
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
   my $i = genHash(__PACKAGE__.'::ReverseIterator',                              # Iterator
-    tree  => $tree->root,                                                       # Tree we are iterating over
+    tree  => root($tree),                                                       # Tree we are iterating over
     node  => $tree,                                                             # Current node within tree
     pos   => undef,                                                             # Current position within node
     key   => undef,                                                             # Key at this position
@@ -652,28 +656,18 @@ sub Tree::Multi::ReverseIterator::prev($)                                       
 
   my $up = sub                                                                  # Iterate up to next node that has not been visited
    {for(my $n = $C; my $p = $n->up; $n = $n->up)
-     {my $i = $n->indexInParent;
+     {my $i = indexInParent $n;
       return &$new($p, $i-1) if $i > 0;
      }
     &$done                                                                      # No nodes not visited
    };
 
   my $i = $iter->pos;
-  if ($C->leaf)
-   {if ($i > 0)
-     {&$new($C, $i-1)
-     }
-    else
-     {&$up
-     }
+  if (leaf $C)                                                                  # Leaf
+   {$i > 0 ?  &$new($C, $i-1) : &$up;
    }
-  else
-   { if ($i >= 0)
-     {&$new($C->node->[$i]->rightMost)
-     }
-    else
-     {&$up
-     }
+  else                                                                          # Node
+   {$i >= 0 ? &$new($C->node->[$i]->rightMost) : &$up
    }
  }
 
@@ -682,20 +676,18 @@ sub flat($@)                                                                    
   confess unless $tree;
   my @s;                                                                        # Print
   my $D;                                                                        # Deepest
-  for(my $i = iterator($tree->root); $i->more; $i->next)                        # Traverse tree
-   {my $d = $i->node->depth;
+  for(my $i = iterator root $tree; $i->more; $i->next)                          # Traverse tree
+   {my $d = depth $i->node;
     $D = $d unless $D and $D > $d;
-    my $t = $i->key;
     $s[$d] //= '';
-    $s[$d]  .= "   $t";
-    my $l = length($s[$d]);
+    $s[$d]  .= "   ".$i->key;
+    my $l = length $s[$d];
     for my $j(0..$D)
-     {$s[$j] //= '';
-      $s[$j]   = substr($s[$j].(' 'x999), 0, $l) if length($s[$j]) < $l;
+     {my $s = $s[$j] //= '';
+      $s[$j] = substr($s.(' 'x999), 0, $l) if length($s) < $l;
      }
    }
-  my $t = join ' ', @title;
-  unshift @s, $t if @title;
+  unshift @s, join(' ', @title) if @title;
   for my $i(keys @s)
    {$s[$i] =~ s/\s+\n/\n/gs;
     $s[$i] =~ s/\s+\Z//gs;
@@ -726,7 +718,7 @@ sub print($;$)                                                                  
      }
    };
 
-  $print->($tree->root, 0);                                                     # Print tree
+  &$print(root($tree), 0);                                                      # Print tree
 
   join "\n", @s, ''
  }
