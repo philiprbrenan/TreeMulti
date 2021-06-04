@@ -2752,11 +2752,11 @@ After deleting 1
 END
  }
 
-ok &randomCheck(3, $develop ? (2, 1) : (4, 2));                                  # Randomize and check against a Perl hash
-ok &randomCheck(4, $develop ? (2, 1) : (4, 2));
-ok &randomCheck(5, $develop ? (2, 1) : (4, 2));
-ok &randomCheck(6, $develop ? (2, 1) : (4, 2));
-ok &randomCheck(7, $develop ? (2, 1) : (4, 2));
-ok &randomCheck(8, $develop ? (2, 1) : (4, 2));
+ok &randomCheck(3, $develop ? (2, 1) : (2, 3));                                  # Randomize and check against a Perl hash
+ok &randomCheck(4, $develop ? (2, 1) : (2, 3));
+ok &randomCheck(5, $develop ? (2, 1) : (2, 2));
+ok &randomCheck(6, $develop ? (2, 1) : (2, 2));
+ok &randomCheck(7, $develop ? (2, 1) : (3, 1));
+ok &randomCheck(8, $develop ? (2, 1) : (3, 1));
 
 lll "Success:", time - $start;
