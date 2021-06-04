@@ -2492,17 +2492,19 @@ sub disorderedCheck($$$)                                                        
   !$e;                                                                          # No errors
  }
 
-sub randomCheck($$)                                                             #P Random insertions
- {my ($n, $N) = @_;                                                             # Keys per node, log 10 nodes
+sub randomCheck($$$)                                                            #P Random insertions
+ {my ($n, $N, $T) = @_;                                                         # Keys per node, log 10 nodes, log 10 number of tests
   local $numberOfKeysPerNode = $n;
-
-  my %t = map {$_=>2*$_} 1..10**$N;
-  my $t = new; $t->insert($_, $t{$_}) for keys %t;
-
   my $e = 0;
-  for my $k(keys %t)
-   {++$e unless     $t->find($k) == $t{$k}; $t->delete($k); delete $t{$k};
-    ++$e if defined $t->find($k);
+
+  for(1..10**$T)                                                                # Each test
+   {my %t = map {$_=>2*$_} 1..10**$N;
+    my $t = new; $t->insert($_, $t{$_}) for keys %t;
+
+    for my $k(keys %t)                                                          # Delete each key in test
+     {++$e unless     $t->find($k) == $t{$k}; $t->delete($k); delete $t{$k};
+      ++$e if defined $t->find($k);
+     }
    }
 
   !$e;                                                                          # No errors
@@ -2750,11 +2752,11 @@ After deleting 1
 END
  }
 
-ok randomCheck(3, $develop ? 2 : 6);                                            # Randomize and check against a Perl hash
-ok randomCheck(4, $develop ? 2 : 6);
-ok randomCheck(5, $develop ? 2 : 6);
-ok randomCheck(6, $develop ? 2 : 6);
-ok randomCheck(7, $develop ? 2 : 6);
-ok randomCheck(8, $develop ? 2 : 6);
+ok &randomCheck(3, $develop ? (2, 1) : (4, 2));                                  # Randomize and check against a Perl hash
+ok &randomCheck(4, $develop ? (2, 1) : (4, 2));
+ok &randomCheck(5, $develop ? (2, 1) : (4, 2));
+ok &randomCheck(6, $develop ? (2, 1) : (4, 2));
+ok &randomCheck(7, $develop ? (2, 1) : (4, 2));
+ok &randomCheck(8, $develop ? (2, 1) : (4, 2));
 
 lll "Success:", time - $start;
