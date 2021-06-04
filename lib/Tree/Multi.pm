@@ -1909,8 +1909,6 @@ under the same terms as Perl itself.
 
 =cut
 
-
-
 # Tests and documentation
 
 sub test
@@ -1940,7 +1938,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 157;
+ {plan tests => 160;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -2467,14 +2465,14 @@ END
 END
  }
 
-sub disordered($$)                                                              #P Disordered insertions
- {my ($n, $N) = @_;                                                             # Keys per node, Nodes
+sub disordered($$)                                                              #P Disordered but stable insertions
+ {my ($n, $N) = @_;                                                             # Keys per node, nodes
   local $numberOfKeysPerNode = $n;
 
   my $t = new;
   my @t = map{$_ = scalar reverse $_; s/\A0+//r} 1..$N;
      $t->insert($_, 2 * $_) for @t;
-     $t                                                                         # Tree built from disordered insertions
+     $t                                                                         # Tree built from disordered but stable insertions
  }
 
 sub disorderedCheck($$$)                                                        #P Check disordered insertions
@@ -2485,14 +2483,27 @@ sub disorderedCheck($$$)                                                        
   my $e = 0;
   my $h = $t->height;
   for my $k(sort {reverse($a) cmp reverse($b)} keys %t)
-   {for my $K(sort keys %t)
-     {++$e unless $t->find($K) == $t{$K};
-     }
-    ++$e unless     $t->find($k) == $t{$k};  $t->delete($k); delete $t{$k};
+   {++$e unless     $t->find($k) == $t{$k};  $t->delete($k); delete $t{$k};
     ++$e if defined $t->find($k);
     ++$e if         $t->height > $h;
    }
   ++$e unless $t->height == 0;
+
+  !$e;                                                                          # No errors
+ }
+
+sub randomCheck($$)                                                             #P Random insertions
+ {my ($n, $N) = @_;                                                             # Keys per node, log 10 nodes
+  local $numberOfKeysPerNode = $n;
+
+  my %t = map {$_=>2*$_} 1..10**$N;
+  my $t = new; $t->insert($_, $t{$_}) for keys %t;
+
+  my $e = 0;
+  for my $k(keys %t)
+   {++$e unless     $t->find($k) == $t{$k}; $t->delete($k); delete $t{$k};
+    ++$e if defined $t->find($k);
+   }
 
   !$e;                                                                          # No errors
  }
@@ -2739,19 +2750,11 @@ After deleting 1
 END
  }
 
-if (!$develop) {
-  my $K = 9; my $N = 256; my $e = 0;
-  for   my $k(3..$K)
-   {for my $n(0..$N)
-     {my $t = disordered($k, $n);
-      ++$e unless disorderedCheck($t, $k, $n);
-     }
-   }
-  is_deeply $e, 0;
- }
-else {ok 1}
-
-if (!$develop) {my $t = disordered(4, 9999); ok disorderedCheck($t, 4, 9999)} else {ok 1}
-if (!$develop) {my $t = disordered(3, 9999); ok disorderedCheck($t, 3, 9999)} else {ok 1}
+ok randomCheck(3, $develop ? 2 : 5);
+ok randomCheck(4, $develop ? 2 : 5);
+ok randomCheck(5, $develop ? 2 : 5);
+ok randomCheck(6, $develop ? 2 : 5);
+ok randomCheck(7, $develop ? 2 : 5);
+ok randomCheck(8, $develop ? 2 : 5);
 
 lll "Success:", time - $start;
