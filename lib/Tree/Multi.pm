@@ -309,7 +309,7 @@ sub mergeWithLeftOrRight($$)                                                    
    }
  }
 
-sub mergeOrFill($)                                                              #P make a node larger than a half node.
+sub mergeOrFill($)                                                              #P Make a node larger than a half node.
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
 
@@ -326,7 +326,7 @@ sub mergeOrFill($)                                                              
     $p->data = $tree->data = [$l->data->@*, $p->data->@*, $r->data->@*];
     $p->node = $tree->node = [$l->node->@*,               $r->node->@*];
 
-    reUp $p, $p->node->@*;
+    reUp $p, $p->node->@*;                                                      # Reconnect children to parent
 
     return;
    }
