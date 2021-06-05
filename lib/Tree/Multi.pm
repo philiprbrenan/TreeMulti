@@ -491,7 +491,7 @@ sub insert($$$)                                                                 
     $node->data = [@d[0..$index], $data, @d[$index+1..$#d]];
    }
 
-  splitFullNode $node                                                               # Split if the leaf has got too big
+  splitFullNode $node                                                           # Split if the leaf has got too big
  }
 
 sub iterator($)                                                                 # Make an iterator for a tree.
