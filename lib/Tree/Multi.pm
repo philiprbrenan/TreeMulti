@@ -69,10 +69,8 @@ sub leaf($)                                                                     
   ! scalar $tree->node->@*                                                      # No children so it must be a leaf
  }
 
-sub separateKeys($)                                                             #P Return ([lower], center, [upper]) keys.
- {my ($node) = @_;                                                              # Node to split
-  @_ == 1 or confess;
-  my @k = $node->keys->@*;
+sub separate(@)                                                                 #P Return ([lower], center, [upper]) keys from an array.
+ {my (@k) = @_;                                                                 # Array to split
   @k == maximumNumberOfKeys or @k == maximumNumberOfNodes or confess 'Keys';    # A node is allowed to overflow by one pending a split
   my @l; my @r;
   while(@k > 1)
@@ -83,18 +81,16 @@ sub separateKeys($)                                                             
   (\@l, $k[0], \@r);
  }
 
+sub separateKeys($)                                                             #P Return ([lower], center, [upper]) keys.
+ {my ($node) = @_;                                                              # Node to split
+  @_ == 1 or confess;
+  separate $node->keys->@*;
+ }
+
 sub separateData($)                                                             #P Return ([lower], center, [upper]) data.
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
-  my @d = $node->data->@*;
-  @d == maximumNumberOfKeys or @d == maximumNumberOfNodes or confess 'Keys';    # A node is allowed to overflow by one pending a split
-  my @l; my @r;
-  while(@d > 1)
-   {push    @l, shift @d;
-    unshift @r, pop   @d if @d > 1;
-   }
-  @l > 0  or confess 'Left'; @r > 0  or confess 'Right'; @d == 1 or confess 'D';
-  (\@l, $d[0], \@r);
+  separate $node->data->@*;
  }
 
 sub separateNode($)                                                             #P Return ([lower], [upper]) children.
