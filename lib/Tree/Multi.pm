@@ -474,19 +474,19 @@ sub insert($$$)                                                                 
    }
   elsif ($n < maximumNumberOfKeys and $tree->node->@* == 0)                     # Node is root with no children and space for more key
    {my @k = $tree->keys->@*;
-    for my $i(keys @k)                                                          # Each key
+    for my $i(reverse keys @k)                                                  # Each key - in reverse due to the preponderance of already sorted data
      {if ((my $s = $key <=> $k[$i]) == 0)                                       # Key already present
        {$tree->data->[$i]= $data;
         return;
        }
-      elsif ($s < 0)                                                            # Insert before least greater key
-       {splice $tree->keys->@*, $i, 0, $key;
-        splice $tree->data->@*, $i, 0, $data;
+      elsif ($s > 0)                                                            # Insert before greatest smaller key
+       {splice $tree->keys->@*, $i+1, 0, $key;
+        splice $tree->data->@*, $i+1, 0, $data;
         return;
        }
      }
-    push $tree->keys->@*, $key;                                                 # Insert the key at the end of the block because it is greater than all the other keys in the block
-    push $tree->data->@*, $data;
+    unshift $tree->keys->@*, $key;                                              # Insert the key at the end of the block because it is greater than all the other keys in the block
+    unshift $tree->data->@*, $data;
     return;
    }
 
