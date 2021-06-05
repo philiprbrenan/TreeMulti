@@ -316,10 +316,11 @@ sub mergeOrFill($)                                                              
   return  unless halfFull($tree);                                               # No need to merge of if not a half node
   confess unless my $p = $tree->up;                                             # Parent exists
 
-  __SUB__->($p) if $p->up;                                                      # Parent is half node so can be merged or filled first
-
-  if (!$p->up and $p->keys->@* == 1 and halfFull($p->node->[0])                 # Parent is the root and it only has one key - merge into the child
-                                    and halfFull($p->node->[1]))
+  if ($p->up)                                                                   # Merge or fill parent
+   {__SUB__->($p);
+   }
+  elsif ($p->keys->@* == 1 and halfFull($p->node->[0])                          # Parent is the root and it only has one key - merge into the child
+                           and halfFull($p->node->[1]))
    {my $l = $p->node->[0];                                                      # Merge the root node
     my $r = $p->node->[1];
     $p->keys = $tree->keys = [$l->keys->@*, $p->keys->@*, $r->keys->@*];
@@ -327,7 +328,6 @@ sub mergeOrFill($)                                                              
     $p->node = $tree->node = [$l->node->@*,               $r->node->@*];
 
     reUp $p, $p->node->@*;                                                      # Reconnect children to parent
-
     return;
    }
 
