@@ -244,31 +244,31 @@ sub indexInParent($)                                                            
  }
 
 sub fillFromLeftOrRight($$)                                                     #P Fill a node from the specified sibling.
- {my ($n, $dir) = @_;                                                           # Node to fill, node to fill from 0 for left or 1 for right
+ {my ($node, $dir) = @_;                                                        # Node to fill, node to fill from 0 for left or 1 for right
   @_ == 2 or confess;
 
-  confess unless    halfFull($n);                                               # Confirm leaf is half full
-  confess unless my $p = $n->up;                                                # Parent of leaf
-  my $i = indexInParent $n;                                                     # Index of leaf in parent
+  confess unless my $p = $node->up;                                             # Parent of leaf
+  my $i = indexInParent $node;                                                  # Index of leaf in parent
 
   if ($dir)                                                                     # Fill from right
    {$i < $p->node->@* - 1 or confess;                                           # Cannot fill from right
-    my $r = $p->node->[$i+1];                                                   # Leaf on right
-    push $n->keys->@*, $p->keys->[$i]; $p->keys->[$i] = shift $r->keys->@*;     # Transfer key
-    push $n->data->@*, $p->data->[$i]; $p->data->[$i] = shift $r->data->@*;     # Transfer data
-    if (!leaf $n)                                                               # Transfer node if not a leaf
-     {push $n->node->@*, shift $r->node->@*;
-      $n->node->[-1]->up = $n;
+    my $r = $p->node->[$i+1];                                                   # Right sibling
+    push $node->keys->@*, $p->keys->[$i]; $p->keys->[$i] = shift $r->keys->@*;  # Transfer key
+    push $node->data->@*, $p->data->[$i]; $p->data->[$i] = shift $r->data->@*;  # Transfer data
+    if (!leaf $node)                                                            # Transfer node if not a leaf
+     {push $node->node->@*, shift $r->node->@*;
+      $node->node->[-1]->up = $node;
      }
    }
   else                                                                          # Fill from left
    {$i > 0 or confess;                                                          # Cannot fill from left
-    my $l = $p->node->[$i-1];                                                   # Leaf on leaf
-    unshift $n->keys->@*, $p->keys->[$i-1];$p->keys->[$i-1] = pop $l->keys->@*; # Transfer key
-    unshift $n->data->@*, $p->data->[$i-1];$p->data->[$i-1] = pop $l->data->@*; # Transfer data
-    if (!leaf $n)                                                               # Transfer node if not a leaf
-     {unshift $n->node->@*, pop $l->node->@*;
-      $n->node->[0]->up = $n;
+    my $I = $i-1;
+    my $l = $p->node->[$I];                                                     # Left sibling
+    unshift $node->keys->@*, $p->keys->[$I];$p->keys->[$I] = pop $l->keys->@*;  # Transfer key
+    unshift $node->data->@*, $p->data->[$I];$p->data->[$I] = pop $l->data->@*;  # Transfer data
+    if (!leaf $node)                                                            # Transfer node if not a leaf
+     {unshift $node->node->@*, pop $l->node->@*;
+      $node->node->[0]->up = $node;
      }
    }
  }
@@ -332,7 +332,7 @@ sub mergeOrFill($)                                                              
   return  unless halfFull($tree);                                               # No need to merge of if not a half node
   confess unless my $p = $tree->up;                                             # Parent exists
 
-  if ($p->up)                                                                   # Merge or fill parent whioch is not the root
+  if ($p->up)                                                                   # Merge or fill parent which is not the root
    {__SUB__->($p);
     merge($tree);
    }
