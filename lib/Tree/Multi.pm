@@ -5,7 +5,7 @@
 #-------------------------------------------------------------------------------
 # podDocumentation
 package Tree::Multi;
-our $VERSION = "20210605";
+our $VERSION = "20210606";
 use warnings FATAL => qw(all);
 use strict;
 use Carp qw(confess cluck);
@@ -120,7 +120,7 @@ sub reUp($@)                                                                    
   $_->up = $tree for @children;                                                 # Connect child to parent
  }
 
-sub splitFullNode($)                                                            #P Split a node, that is not a leaf, if it is full
+sub splitFullNode($)                                                            #P Split a node, that is not a leaf, if it is full.
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
 
@@ -311,7 +311,7 @@ sub mergeWithLeftOrRight($$)                                                    
    }
  }
 
-sub merge($)                                                                    # Merge the current node with its sibling
+sub merge($)                                                                    #P Merge the current node with its sibling.
  {my ($tree) = @_;                                                              # Tree
   if (my $i = indexInParent $tree)                                              # Merge with left node
    {my $l = $tree->up->node->[$i-1];                                            # Left node
@@ -751,7 +751,7 @@ END
 Multi-way tree in Pure Perl with an even or odd number of keys per node.
 
 
-Version "20210604".
+Version "20210605".
 
 
 The following sections describe the methods in each functional area of this
@@ -839,7 +839,7 @@ B<Example:>
 
 =head2 find($root, $key)
 
-Find a key in a tree returning its associated data or undef if the key does not exist
+Find a key in a tree returning its associated data or undef if the key does not exist.
 
      Parameter  Description
   1  $root      Root of tree
@@ -896,7 +896,7 @@ B<Example:>
 
 =head2 leftMost($tree)
 
-Return the left most node below the specified one
+Return the left most node below the specified one.
 
      Parameter  Description
   1  $tree      Tree
@@ -934,7 +934,7 @@ B<Example:>
 
 =head2 rightMost($tree)
 
-Return the right most node below the specified one
+Return the right most node below the specified one.
 
      Parameter  Description
   1  $tree      Tree
@@ -972,7 +972,7 @@ B<Example:>
 
 =head2 height($tree)
 
-Return the height of the tree
+Return the height of the tree.
 
      Parameter  Description
   1  $tree      Tree
@@ -1019,7 +1019,7 @@ B<Example:>
 
 =head2 depth($tree)
 
-Return the depth of a node within a tree
+Return the depth of a node within a tree.
 
      Parameter  Description
   1  $tree      Tree
@@ -1121,7 +1121,7 @@ B<Example:>
 
 =head2 insert($tree, $key, $data)
 
-Insert a key and data into a tree
+Insert the specified key and data into a tree.
 
      Parameter  Description
   1  $tree      Tree
@@ -1175,7 +1175,7 @@ B<Example:>
 
 =head2 iterator($tree)
 
-Make an iterator for a tree
+Make an iterator for a tree.
 
      Parameter  Description
   1  $tree      Tree
@@ -1239,7 +1239,7 @@ B<Example:>
 
 =head2 Tree::Multi::Iterator::next($iter)
 
-Find the next key
+Find the next key.
 
      Parameter  Description
   1  $iter      Iterator
@@ -1260,7 +1260,7 @@ B<Example:>
 
 =head2 reverseIterator($tree)
 
-Create a reverse iterator for a tree
+Create a reverse iterator for a tree.
 
      Parameter  Description
   1  $tree      Tree
@@ -1289,7 +1289,7 @@ B<Example:>
 
 =head2 Tree::Multi::ReverseIterator::prev($iter)
 
-Find the previous key
+Find the previous key.
 
      Parameter  Description
   1  $iter      Iterator
@@ -1316,7 +1316,7 @@ B<Example:>
 
 =head2 flat($tree, @title)
 
-Print the keys in a tree from left right to make it easier to visualize the structure of the tree
+Print the keys in a tree from left right to make it easier to visualize the structure of the tree.
 
      Parameter  Description
   1  $tree      Tree
@@ -1348,7 +1348,7 @@ B<Example:>
 
 =head2 print($tree, $i)
 
-Print the keys in a tree optionally marking the active key
+Print the keys in a tree optionally marking the active key.
 
      Parameter  Description
   1  $tree      Tree
@@ -1401,7 +1401,7 @@ B<Example:>
 
 =head2 size($tree)
 
-Count the number of keys in a tree
+Count the number of keys in a tree.
 
      Parameter  Description
   1  $tree      Tree
@@ -1585,6 +1585,13 @@ Confirm that a node is half full.
      Parameter  Description
   1  $tree      Tree
 
+=head2 separate(@k)
+
+Return ([lower], center, [upper]) keys from an array.
+
+     Parameter  Description
+  1  @k         Array to split
+
 =head2 separateKeys($node)
 
 Return ([lower], center, [upper]) keys.
@@ -1594,64 +1601,36 @@ Return ([lower], center, [upper]) keys.
 
 =head2 separateData($node)
 
-Return ([lower], center, [upper]) data
+Return ([lower], center, [upper]) data.
 
      Parameter  Description
   1  $node      Node to split
 
 =head2 separateNode($node)
 
-Return ([lower], [upper]) children
+Return ([lower], [upper]) children.
 
      Parameter  Description
   1  $node      Node to split
 
-=head2 reUp($node, @children)
+=head2 reUp($tree, @children)
 
-Reconnect the children to their new parent
+Reconnect the children to their new parent.
 
      Parameter  Description
-  1  $node      Node
+  1  $tree      Tree
   2  @children  Children
-
-=head2 splitNode($node)
-
-Split a full node in half assuming it has a non full parent
-
-     Parameter  Description
-  1  $node      Node to split
-
-=head2 splitRootNode($node)
-
-Split a full root
-
-     Parameter  Description
-  1  $node      Node to split
 
 =head2 splitFullNode($node)
 
-Split a full node
-
-     Parameter  Description
-  1  $node      Node to split
-
-=head2 splitLeafNode($node)
-
-Split a full leaf node in assuming it has a non full parent
-
-     Parameter  Description
-  1  $node      Node to split
-
-=head2 splitRootLeafNode($node)
-
-Split a full root that is also a leaf
+Split a node, that is not a leaf, if it is full.
 
      Parameter  Description
   1  $node      Node to split
 
 =head2 findAndSplit($root, $key)
 
-Find a key in a tree splitting full nodes along the path to the key
+Find a key in a tree splitting full nodes along the path to the key.
 
      Parameter  Description
   1  $root      Root of tree
@@ -1659,30 +1638,37 @@ Find a key in a tree splitting full nodes along the path to the key
 
 =head2 indexInParent($tree)
 
-Get the index of a node in its parent
+Get the index of a node in its parent.
 
      Parameter  Description
   1  $tree      Tree
 
-=head2 fillFromLeftOrRight($n, $dir)
+=head2 fillFromLeftOrRight($node, $dir)
 
-Fill a node from the specified sibling
+Fill a node from the specified sibling.
 
      Parameter  Description
-  1  $n         Node to fill
+  1  $node      Node to fill
   2  $dir       Node to fill from 0 for left or 1 for right
 
 =head2 mergeWithLeftOrRight($n, $dir)
 
-Merge two adjacent nodes
+Merge two adjacent nodes.
 
      Parameter  Description
   1  $n         Node to merge into
   2  $dir       Node to merge is on right if 1 else left
 
+=head2 merge($tree)
+
+Merge the current node with its sibling.
+
+     Parameter  Description
+  1  $tree      Tree
+
 =head2 mergeOrFill($tree)
 
-make a node larger than a half node
+Make a node larger than a half node.
 
      Parameter  Description
   1  $tree      Tree
@@ -1697,7 +1683,7 @@ Delete a key in a leaf.
 
 =head2 deleteKey($tree, $i)
 
-Delete a key
+Delete a key.
 
      Parameter  Description
   1  $tree      Tree
@@ -1743,87 +1729,83 @@ Random insertions
 
 1 L<delete|/delete> - Find a key in a tree, delete it and return any associated data.
 
-2 L<deleteKey|/deleteKey> - Delete a key
+2 L<deleteKey|/deleteKey> - Delete a key.
 
 3 L<deleteLeafKey|/deleteLeafKey> - Delete a key in a leaf.
 
-4 L<depth|/depth> - Return the depth of a node within a tree
+4 L<depth|/depth> - Return the depth of a node within a tree.
 
 5 L<disordered|/disordered> - Disordered but stable insertions
 
 6 L<disorderedCheck|/disorderedCheck> - Check disordered insertions
 
-7 L<fillFromLeftOrRight|/fillFromLeftOrRight> - Fill a node from the specified sibling
+7 L<fillFromLeftOrRight|/fillFromLeftOrRight> - Fill a node from the specified sibling.
 
-8 L<find|/find> - Find a key in a tree returning its associated data or undef if the key does not exist
+8 L<find|/find> - Find a key in a tree returning its associated data or undef if the key does not exist.
 
-9 L<findAndSplit|/findAndSplit> - Find a key in a tree splitting full nodes along the path to the key
+9 L<findAndSplit|/findAndSplit> - Find a key in a tree splitting full nodes along the path to the key.
 
-10 L<flat|/flat> - Print the keys in a tree from left right to make it easier to visualize the structure of the tree
+10 L<flat|/flat> - Print the keys in a tree from left right to make it easier to visualize the structure of the tree.
 
 11 L<full|/full> - Confirm that a node is full.
 
 12 L<halfFull|/halfFull> - Confirm that a node is half full.
 
-13 L<height|/height> - Return the height of the tree
+13 L<height|/height> - Return the height of the tree.
 
-14 L<indexInParent|/indexInParent> - Get the index of a node in its parent
+14 L<indexInParent|/indexInParent> - Get the index of a node in its parent.
 
-15 L<insert|/insert> - Insert a key and data into a tree
+15 L<insert|/insert> - Insert the specified key and data into a tree.
 
-16 L<iterator|/iterator> - Make an iterator for a tree
+16 L<iterator|/iterator> - Make an iterator for a tree.
 
 17 L<leaf|/leaf> - Confirm that the tree is a leaf.
 
-18 L<leftMost|/leftMost> - Return the left most node below the specified one
+18 L<leftMost|/leftMost> - Return the left most node below the specified one.
 
 19 L<maximumNumberOfKeys|/maximumNumberOfKeys> - Maximum number of keys per node.
 
 20 L<maximumNumberOfNodes|/maximumNumberOfNodes> - Maximum number of children per parent.
 
-21 L<mergeOrFill|/mergeOrFill> - make a node larger than a half node
+21 L<merge|/merge> - Merge the current node with its sibling.
 
-22 L<mergeWithLeftOrRight|/mergeWithLeftOrRight> - Merge two adjacent nodes
+22 L<mergeOrFill|/mergeOrFill> - Make a node larger than a half node.
 
-23 L<minimumNumberOfKeys|/minimumNumberOfKeys> - Minimum number of keys per node.
+23 L<mergeWithLeftOrRight|/mergeWithLeftOrRight> - Merge two adjacent nodes.
 
-24 L<new|/new> - Create a new multi-way tree node.
+24 L<minimumNumberOfKeys|/minimumNumberOfKeys> - Minimum number of keys per node.
 
-25 L<print|/print> - Print the keys in a tree optionally marking the active key
+25 L<new|/new> - Create a new multi-way tree node.
 
-26 L<randomCheck|/randomCheck> - Random insertions
+26 L<print|/print> - Print the keys in a tree optionally marking the active key.
 
-27 L<reUp|/reUp> - Reconnect the children to their new parent
+27 L<randomCheck|/randomCheck> - Random insertions
 
-28 L<reverseIterator|/reverseIterator> - Create a reverse iterator for a tree
+28 L<reUp|/reUp> - Reconnect the children to their new parent.
 
-29 L<rightMost|/rightMost> - Return the right most node below the specified one
+29 L<reverseIterator|/reverseIterator> - Create a reverse iterator for a tree.
 
-30 L<root|/root> - Return the root node of a tree.
+30 L<rightMost|/rightMost> - Return the right most node below the specified one.
 
-31 L<separateData|/separateData> - Return ([lower], center, [upper]) data
+31 L<root|/root> - Return the root node of a tree.
 
-32 L<separateKeys|/separateKeys> - Return ([lower], center, [upper]) keys.
+32 L<separate|/separate> - Return ([lower], center, [upper]) keys from an array.
 
-33 L<separateNode|/separateNode> - Return ([lower], [upper]) children
+33 L<separateData|/separateData> - Return ([lower], center, [upper]) data.
 
-34 L<size|/size> - Count the number of keys in a tree
+34 L<separateKeys|/separateKeys> - Return ([lower], center, [upper]) keys.
 
-35 L<splitFullNode|/splitFullNode> - Split a full node
+35 L<separateNode|/separateNode> - Return ([lower], [upper]) children.
 
-36 L<splitLeafNode|/splitLeafNode> - Split a full leaf node in assuming it has a non full parent
+36 L<size|/size> - Count the number of keys in a tree.
 
-37 L<splitNode|/splitNode> - Split a full node in half assuming it has a non full parent
+37 L<splitFullNode|/splitFullNode> - Split a node, that is not a leaf, if it is full.
 
-38 L<splitRootLeafNode|/splitRootLeafNode> - Split a full root that is also a leaf
+38 L<T|/T> - Write a result to the log file
 
-39 L<splitRootNode|/splitRootNode> - Split a full root
+39 L<Tree::Multi::Iterator::next|/Tree::Multi::Iterator::next> - Find the next key.
 
-40 L<T|/T> - Write a result to the log file
-
-41 L<Tree::Multi::Iterator::next|/Tree::Multi::Iterator::next> - Find the next key
-
-42 L<Tree::Multi::ReverseIterator::prev|/Tree::Multi::ReverseIterator::prev> - Find the previous key
+40 L<Tree::Multi::ReverseIterator::prev|/Tree::Multi::ReverseIterator::prev> - Find the previous key.
 
 =head1 Installation
 
