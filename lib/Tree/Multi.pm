@@ -188,8 +188,10 @@ sub findAndSplit($$)                                                            
 
     for my $i(keys @k)                                                          # Search the keys in this node as greater than least key and less than largest key
      {my $s = $key <=> $k[$i];                                                  # Compare key
-      return (0, $tree, $i) if $s == 0;                                         # Found key
-      if ($s < 0)                                                               # Less than current key
+      if ($s == 0)                                                              # Found key
+       {return (0, $tree, $i);
+       }
+      elsif ($s < 0)                                                            # Less than current key
        {return (-1, $tree, $i) unless my $n = $tree->node->[$i];                # Step through if possible
         $tree = $n;                                                             # Step
         last;
