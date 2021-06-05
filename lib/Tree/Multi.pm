@@ -316,32 +316,37 @@ sub mergeOrFill($)                                                              
   return  unless halfFull($tree);                                               # No need to merge of if not a half node
   confess unless my $p = $tree->up;                                             # Parent exists
 
+  my $merge = sub                                                               # Merge the current node with its sibling
+   {if (my $i = indexInParent $tree)                                            # Merge with left node
+     {my $l = $tree->up->node->[$i-1];                                          # Left node
+      if (halfFull(my $r = $tree))
+       {$l->halfFull ? mergeWithLeftOrRight $r, 0 : fillFromLeftOrRight $r, 0;  # Merge as left and right nodes are half full
+       }
+     }
+    else                                                                        # Merge with right node
+     {my $r = $p->node->[1];                                                    # Right node
+      if (halfFull(my $l = $tree))
+       {halfFull($r) ? mergeWithLeftOrRight $l, 1 : fillFromLeftOrRight $l, 1;  # Merge as left and right nodes are half full
+       }
+     }
+   };
+
   if ($p->up)                                                                   # Merge or fill parent
    {__SUB__->($p);
+    &$merge;
    }
   elsif ($p->keys->@* == 1 and halfFull($p->node->[0])                          # Parent is the root and it only has one key - merge into the child
                            and halfFull($p->node->[1]))
    {my $l = $p->node->[0];                                                      # Merge the root node
     my $r = $p->node->[1];
-    $p->keys = $tree->keys = [$l->keys->@*, $p->keys->@*, $r->keys->@*];
+    $p->keys = $tree->keys = [$l->keys->@*, $p->keys->@*, $r->keys->@*];        # Merge in place to retain addressability
     $p->data = $tree->data = [$l->data->@*, $p->data->@*, $r->data->@*];
     $p->node = $tree->node = [$l->node->@*,               $r->node->@*];
 
     reUp $p, $p->node->@*;                                                      # Reconnect children to parent
-    return;
    }
-
-  if (my $i = indexInParent $tree)                                              # Merge with left node
-   {my $l = $tree->up->node->[$i-1];                                            # Left node
-    if (halfFull(my $r = $tree))
-     {$l->halfFull ? mergeWithLeftOrRight $r, 0 : fillFromLeftOrRight $r, 0;    # Merge as left and right nodes are half full
-     }
-   }
-  else                                                                          # Merge with right node
-   {my $r = $p->node->[1];                                                      # Right node
-    if (halfFull(my $l = $tree))
-     {halfFull($r) ? mergeWithLeftOrRight $l, 1 : fillFromLeftOrRight $l, 1;    # Merge as left and right nodes are half full
-     }
+  else                                                                          # Merge child below root with a sibling - the root has more than one key so this is possible
+   {&$merge;
    }
  }
 
