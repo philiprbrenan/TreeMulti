@@ -490,7 +490,7 @@ sub insert($$$)                                                                 
   if ($compare == 0)                                                            # Found an equal key whose data we can update
    {$node->data->[$index] = $data;
    }
-  elsif ($node->keys->@* < maximumNumberOfKeys - 1)                             # We have room for the insert
+  elsif ($node->keys->@* < maximumNumberOfKeys)                                 # We have room for the insert
    {++$index if $compare > 0;                                                   # Position at which to insert new key
     splice $node->keys->@*, $index, 0, $key;
     splice $node->data->@*, $index, 0, $data;
@@ -502,20 +502,18 @@ sub insert($$$)                                                                 
     my @k = $node->keys->@*;
     my @d = $node->data->@*;
 
-    splice @k, $index, 0, $key;
+    splice @k, $index, 0, $key;                                                 # Edit key into position
     splice @d, $index, 0, $data;
 
-    my $k = pop @k;
+    my $k = pop @k;                                                             # Save excess
     my $d = pop @d;
 
-    $node->keys = [@k];
+    $node->keys = [@k];                                                         # Reconstitute node
     $node->data = [@d];
-lll "AAAA", dump($node->keys);
 
     splitFullNode $node;                                                        # Split the leaf as we know it is full
-lll "BBBB", dump($node->node);
 
-    push $node->node->[0]->keys->@*, $k;
+    push $node->node->[0]->keys->@*, $k;                                        # Reinstall excess
     push $node->node->[0]->data->@*, $d;
    }
  }
@@ -1884,7 +1882,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 254;
+ {plan tests => 83;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -1892,15 +1890,19 @@ else
 
 bail_on_fail;                                                                   # Stop if any tests fails
 
-sub T($$)                                                                       #P Write a result to the log file
- {my ($tree, $expected) = @_;                                                   # Tree, expected print
+sub T($$;$)                                                                     #P Print a tree to the log file and check it against the expected result
+ {my ($tree, $expected, $flat) = @_;                                            # Tree, expected print, optionally print in flat mode if true
   confess unless ref($tree);
-  my $got = $tree->print;
+  my $got = $flat ? $tree->flat : $tree->print;
   return $got eq $expected unless $develop;
   my $s = &showGotVersusWanted($got, $expected);
   return 1 unless $s;
   owf($logFile, $got);
   confess "$s\n";
+ }
+
+sub F($$)                                                                       #P Print a tree flatly to the log file and check its result
+ {&T(@_, 1);
  }
 
 sub disordered($$)                                                              #P Disordered but stable insertions
@@ -1971,39 +1973,44 @@ if (1) {
 
   $t->insert($_, 2 * $_) for 1..$N;
 
-  is_deeply $t->print, <<END;
- 72 144
-   9 18 27 36 45 54 63
-     1 2 3 4 5 6 7 8
-     10 11 12 13 14 15 16 17
-     19 20 21 22 23 24 25 26
-     28 29 30 31 32 33 34 35
-     37 38 39 40 41 42 43 44
-     46 47 48 49 50 51 52 53
-     55 56 57 58 59 60 61 62
-     64 65 66 67 68 69 70 71
-   81 90 99 108 117 126 135
-     73 74 75 76 77 78 79 80
-     82 83 84 85 86 87 88 89
-     91 92 93 94 95 96 97 98
-     100 101 102 103 104 105 106 107
-     109 110 111 112 113 114 115 116
-     118 119 120 121 122 123 124 125
-     127 128 129 130 131 132 133 134
-     136 137 138 139 140 141 142 143
-   153 162 171 180 189 198 207 216 225 234 243
-     145 146 147 148 149 150 151 152
-     154 155 156 157 158 159 160 161
-     163 164 165 166 167 168 169 170
-     172 173 174 175 176 177 178 179
-     181 182 183 184 185 186 187 188
-     190 191 192 193 194 195 196 197
-     199 200 201 202 203 204 205 206
-     208 209 210 211 212 213 214 215
-     217 218 219 220 221 222 223 224
-     226 227 228 229 230 231 232 233
-     235 236 237 238 239 240 241 242
-     244 245 246 247 248 249 250 251 252 253 254 255 256
+  ok T($t, <<END);
+ 64 128 192
+   8 16 24 32 40 48 56
+     1 2 3 4 5 6 7
+     9 10 11 12 13 14 15
+     17 18 19 20 21 22 23
+     25 26 27 28 29 30 31
+     33 34 35 36 37 38 39
+     41 42 43 44 45 46 47
+     49 50 51 52 53 54 55
+     57 58 59 60 61 62 63
+   72 80 88 96 104 112 120
+     65 66 67 68 69 70 71
+     73 74 75 76 77 78 79
+     81 82 83 84 85 86 87
+     89 90 91 92 93 94 95
+     97 98 99 100 101 102 103
+     105 106 107 108 109 110 111
+     113 114 115 116 117 118 119
+     121 122 123 124 125 126 127
+   136 144 152 160 168 176 184
+     129 130 131 132 133 134 135
+     137 138 139 140 141 142 143
+     145 146 147 148 149 150 151
+     153 154 155 156 157 158 159
+     161 162 163 164 165 166 167
+     169 170 171 172 173 174 175
+     177 178 179 180 181 182 183
+     185 186 187 188 189 190 191
+   200 208 216 224 232 240 248
+     193 194 195 196 197 198 199
+     201 202 203 204 205 206 207
+     209 210 211 212 213 214 215
+     217 218 219 220 221 222 223
+     225 226 227 228 229 230 231
+     233 234 235 236 237 238 239
+     241 242 243 244 245 246 247
+     249 250 251 252 253 254 255 256
 END
 
   if (1)
@@ -2024,9 +2031,9 @@ if (1) {                                                                        
   my @t = reverse map{scalar reverse; s/\A0+//r} 1..$N;
   $t->insert($_, 2 * $_) for @t;
 
-  is_deeply $t->print, <<END;
- 129 193
-   9 17 25 33 41 49 57 65 73 81 89 97 105 113 121
+  ok T($t, <<END);
+ 65 129 193
+   9 17 25 33 41 49 57
      1 2 3 4 5 6 7 8
      10 11 12 13 14 15 16
      18 19 20 21 22 23 24
@@ -2035,6 +2042,7 @@ if (1) {                                                                        
      42 43 44 45 46 47 48
      50 51 52 53 54 55 56
      58 59 60 61 62 63 64
+   73 81 89 97 105 113 121
      66 67 68 69 70 71 72
      74 75 76 77 78 79 80
      82 83 84 85 86 87 88
@@ -2073,411 +2081,6 @@ END
    }
  }
 
-if (1) {
-  local $numberOfKeysPerNode = 3;
-
-  my $t = new; my $N = 16;
-
-  $t->insert($_, 2 * $_) for 1..$N;
-
-  ok T($t, <<END);
- 6
-   3
-     1 2
-     4 5
-   9 12 15
-     7 8
-     10 11
-     13 14
-     16
-END
-
-  ok $t->find(16); ok $t->delete(16) == 2 * 16;  ok !$t->find(16); ok T($t, <<END);
- 6
-   3
-     1 2
-     4 5
-   9 12 14
-     7 8
-     10 11
-     13
-     15
-END
-
-  ok $t->find(15); ok $t->delete(15) == 2 * 15;  ok !$t->find(15); ok T($t, <<END);
- 6
-   3
-     1 2
-     4 5
-   9 12
-     7 8
-     10 11
-     13 14
-END
-
-  ok $t->find(14); ok $t->delete(14) == 2 * 14;  ok !$t->find(14); ok T($t, <<END);
- 6
-   3
-     1 2
-     4 5
-   9 12
-     7 8
-     10 11
-     13
-END
-
-  ok $t->find(13); ok $t->delete(13) == 2 * 13;  ok !$t->find(13); ok T($t, <<END);
- 6
-   3
-     1 2
-     4 5
-   9 11
-     7 8
-     10
-     12
-END
-
-  ok $t->find(12); ok $t->delete(12) == 2 * 12;  ok !$t->find(12); ok T($t, <<END);
- 6
-   3
-     1 2
-     4 5
-   9
-     7 8
-     10 11
-END
-
-  ok $t->find(11); ok $t->delete(11) == 2 * 11;  ok !$t->find(11); ok T($t, <<END);
- 6
-   3
-     1 2
-     4 5
-   9
-     7 8
-     10
-END
-
-  ok $t->find(10); ok $t->delete(10) == 2 * 10;  ok !$t->find(10); ok T($t, <<END);
- 3 6 8
-   1 2
-   4 5
-   7
-   9
-END
-
-  ok $t->find(9); ok $t->delete(9) == 2 * 9;   ok !$t->find(9);  ok T($t, <<END);
- 3 6
-   1 2
-   4 5
-   7 8
-END
-
-  ok $t->find(8); ok $t->delete(8) == 2 * 8;   ok !$t->find(8);  ok T($t, <<END);
- 3 6
-   1 2
-   4 5
-   7
-END
-
-  ok $t->find(7); ok $t->delete(7) == 2 * 7;   ok !$t->find(7);  ok T($t, <<END);
- 3 5
-   1 2
-   4
-   6
-END
-
-  ok $t->find(6); ok $t->delete(6) == 2 * 6;   ok !$t->find(6);  ok T($t, <<END);
- 3
-   1 2
-   4 5
-END
-
-  ok $t->find(5); ok $t->delete(5) == 2 * 5;   ok !$t->find(5);  ok T($t, <<END);
- 3
-   1 2
-   4
-END
-
-  ok $t->find(4); ok $t->delete(4) == 2 * 4;   ok !$t->find(4);  ok T($t, <<END);
- 2
-   1
-   3
-END
-
-  ok $t->find(3);  ok $t->delete(3) == 2 * 3; ok !$t->find(3);
-
-  ok T($t, <<END);
- 1 2
-END
-
-  ok $t->find(2); ok $t->delete(2) == 2 * 2;   ok !$t->find(2);  ok T($t, <<END);
- 1
-END
-
-  ok $t->find(1); ok $t->delete(1) == 2 * 1;   ok !$t->find(1);  ok T($t, <<END);
-END
- }
-
-if (1) {
-  local $numberOfKeysPerNode = 3;
-
-  my $t = new; my $N = 5;
-
-  $t->insert($_, 2 * $_) for 1..$N;
-
-  ok T($t, <<END);
- 3
-   1 2
-   4 5
-END
-
-  ok $t->delete(4) == 2 * 4;  ok T($t, <<END);
- 3
-   1 2
-   5
-END
-
-  ok $t->delete(1) == 2 * 1;  ok T($t, <<END);
- 3
-   2
-   5
-END
-
-  ok $t->delete(2) == 2 * 2;   ok T($t, <<END);
- 3 5
-END
-
-  ok $t->delete(3) == 2 * 3;  ok T($t, <<END);
- 5
-END
- }
-
-if (1) {
-  local $numberOfKeysPerNode = 3;
-
-  my $t = new; my $N = 15;
-
-  $t->insert($_, 2 * $_) for 1..$N;
-
-  ok T($t, <<END);
- 6
-   3
-     1 2
-     4 5
-   9 12
-     7 8
-     10 11
-     13 14 15
-END
-
-  ok $t->find(3); is_deeply $t->delete(3), 2 * 3;    ok !$t->find(3);  ok T($t, <<END);
- 6
-   4
-     1 2
-     5
-   9 12
-     7 8
-     10 11
-     13 14 15
-END
-
-  ok $t->find(9); ok $t->delete(9) == 2 * 9;    ok !$t->find(9);  ok T($t, <<END);
- 6
-   4
-     1 2
-     5
-   10 12
-     7 8
-     11
-     13 14 15
-END
-
-  ok $t->find(4); ok $t->delete(4) == 2 * 4;    ok !$t->find(4);  ok T($t, <<END);
- 10
-   2 6
-     1
-     5
-     7 8
-   12
-     11
-     13 14 15
-END
-
-  ok $t->find(12); ok $t->delete(12) == 2 * 12;   ok !$t->find(12); ok T($t, <<END);
- 10
-   2 6
-     1
-     5
-     7 8
-   13
-     11
-     14 15
-END
-
-  ok $t->find(2); ok $t->delete(2) == 2 * 2;    ok !$t->find(2);  ok T($t, <<END);
- 10
-   6
-     1 5
-     7 8
-   13
-     11
-     14 15
-END
-
-  ok $t->find(13); ok $t->delete(13) == 2 * 13;   ok !$t->find(13); ok T($t, <<END);
- 10
-   6
-     1 5
-     7 8
-   14
-     11
-     15
-END
-
-  ok $t->find(6); ok $t->delete(6) == 2 * 6;    ok !$t->find(6);  ok T($t, <<END);
- 10
-   7
-     1 5
-     8
-   14
-     11
-     15
-END
-
-  ok $t->find(14); ok $t->delete(14) == 2 * 14;   ok !$t->find(14); ok T($t, <<END);
- 7 10
-   1 5
-   8
-   11 15
-END
- }
-
-if (1) {
-  local $numberOfKeysPerNode = 3;
-
-  my $t = new; my $N = 15;
-
-  $t->insert($_, 2 * $_) for 1..$N;
-
-  ok T($t, <<END);
- 6
-   3
-     1 2
-     4 5
-   9 12
-     7 8
-     10 11
-     13 14 15
-END
-
-  ok $t->find(6); ok $t->delete(6) == 2 * 6;   ok !$t->find(6);  ok T($t, <<END);
- 7
-   3
-     1 2
-     4 5
-   9 12
-     8
-     10 11
-     13 14 15
-END
-
-  ok $t->find(7); ok $t->delete(7) == 2 * 7;   ok !$t->find(7);  ok T($t, <<END);
- 8
-   3
-     1 2
-     4 5
-   10 12
-     9
-     11
-     13 14 15
-END
-
-  ok $t->find(8); ok $t->delete(8) == 2 * 8;   ok !$t->find(8);  ok T($t, <<END);
- 9
-   3
-     1 2
-     4 5
-   12
-     10 11
-     13 14 15
-END
-
-  ok $t->find(9); ok $t->delete(9) == 2 * 9;   ok !$t->find(9);  ok T($t, <<END);
- 10
-   3
-     1 2
-     4 5
-   12
-     11
-     13 14 15
-END
-
-  ok $t->find(10); ok $t->delete(10) == 2 * 10;  ok !$t->find(10); ok T($t, <<END);
- 3 5 12
-   1 2
-   4
-   11
-   13 14 15
-END
-
-  ok $t->find(3); ok $t->delete(3) == 2 * 3;   ok !$t->find(3);  ok T($t, <<END);
- 2 5 12
-   1
-   4
-   11
-   13 14 15
-END
-
-  ok $t->find(2); ok $t->delete(2) == 2 * 2;   ok !$t->find(2);  ok T($t, <<END);
- 5 12
-   1 4
-   11
-   13 14 15
-END
-
-  ok $t->find(5); ok $t->delete(5) == 2 * 5;   ok !$t->find(5);  ok T($t, <<END);
- 4 12
-   1
-   11
-   13 14 15
-END
-
-  ok $t->find(4); ok $t->delete(4) == 2 * 4;   ok !$t->find(4);  ok T($t, <<END);
- 12
-   1 11
-   13 14 15
-END
-
-  ok $t->find(12); ok $t->delete(12) == 2 * 12;  ok !$t->find(12); ok T($t, <<END);
- 13
-   1 11
-   14 15
-END
-
-  ok $t->find(13); ok $t->delete(13) == 2 * 13;  ok !$t->find(13); ok T($t, <<END);
- 14
-   1 11
-   15
-END
-
-  ok $t->find(14); ok $t->delete(14) == 2 * 14;  ok !$t->find(14); ok T($t, <<END);
- 11
-   1
-   15
-END
-
-  ok $t->find(11); ok $t->delete(11) == 2 * 11;  ok !$t->find(11); ok T($t, <<END);
- 1 15
-END
-
-  ok $t->find(1); ok $t->delete(1) == 2 * 1;   ok !$t->find(1);  ok T($t, <<END);
- 15
-END
-
-  ok $t->find(15); ok $t->delete(15) == 2 * 15;  ok !$t->find(15); ok T($t, <<END);
-END
- }
-
 if (1) {                                                                        #Titerator #TTree::Multi::Iterator::next  #TTree::Multi::Iterator::more
   local $numberOfKeysPerNode = 3; my $N = 256; my $e = 0;  my $t = new;
 
@@ -2497,22 +2100,25 @@ if (1) {                                                                        
    {$t->insert($n, $n);
    }
 
-  is_deeply $t->leftMost ->keys, [1, 2];
+  ok T($t, <<END);
+ 4 8
+   2
+     1
+     3
+   6
+     5
+     7
+   10 12
+     9
+     11
+     13
+END
+
+  is_deeply $t->leftMost ->keys, [1];
   is_deeply $t->rightMost->keys, [13];
   ok $t->leftMost ->leaf;
   ok $t->rightMost->leaf;
   ok $t->root == $t;
-
-  ok T($t, <<END);
- 6
-   3
-     1 2
-     4 5
-   9 12
-     7 8
-     10 11
-     13
-END
  }
 
 if (1) {                                                                        #TreverseIterator #TTree::Multi::ReverseIterator::prev  #TTree::Multi::ReverseIterator::less
@@ -2543,153 +2149,15 @@ if (1) {                                                                        
   $t->insert(5, 5); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 5;
   $t->insert(6, 6); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 6;
   $t->insert(7, 7); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 7;
-  $t->insert(8, 8); ok $t->height == 2; ok $t->leftMost->depth == 2; ok $t->size == 8;
+  $t->insert(8, 8); ok $t->height == 3; ok $t->leftMost->depth == 3; ok $t->size == 8;
 
-  is_deeply $t->flat, <<END;  owf $logFile, $t->flat if $develop;
+  T($t, <<END, 1);
 
-           3           6
-   1   2       4   5       7   8
+               4
+       2               6
+   1       3       5       7   8
 END
 
- }
-
-if (1) {                                                                        # Even number of keys
-  my $t = disordered(4, 64);
-
-  ok T($t, <<END);
- 61
-   9 31
-     3 6
-       1 2
-       4 5
-       7 8
-     13 22
-       11 12
-       14 15 16 21
-       23 24 25 26
-     34 42 51
-       32 33
-       35 36 41
-       43 44 45 46
-       52 53 54 55
-   82
-     64 72
-       62 63
-       65 71
-       73 74 75 81
-     91
-       83 84 85
-       92 93 94 95
-END
- }
-
-if (1) {                                                                        # Deleting interior nodes
-  my $k = 3;  my $n = 18;
-  my $t = disordered  $k, $n;
-  my @s;
-  push @s, $t->flat("Start");
-  for my $k(31, 61, 6, 5, 21, 4, 3, 2, 7, 8, 11, 41, 71, 51, 81, 9, 1)
-   {$t->delete($k);
-    push @s, $t->flat("After deleting $k");
-   }
-
-  my $s = join "\n", @s;  owf $logFile, $s if $develop;
-  is_deeply $s, <<END;
-Start
-
-                       6                         31
-           3                       9                            61
-   1   2       4   5       7   8       11   21        41   51        71   81
-
-After deleting 31
-
-                       6                    21
-           3                       9                       61
-   1   2       4   5       7   8       11        41   51        71   81
-
-After deleting 61
-
-                       6                    21
-           3                       9                       71
-   1   2       4   5       7   8       11        41   51        81
-
-After deleting 6
-
-                       7                21
-           3                   9                       71
-   1   2       4   5       8       11        41   51        81
-
-After deleting 5
-
-                   7                21
-           3               9                       71
-   1   2       4       8       11        41   51        81
-
-After deleting 21
-
-                               11
-           3       7                          71
-   1   2       4       8   9        41   51        81
-
-After deleting 4
-
-                           11
-       2       7                          71
-   1       3       8   9        41   51        81
-
-After deleting 3
-
-                       11
-           7                          71
-   1   2       8   9        41   51        81
-
-After deleting 2
-
-                   11
-       7                          71
-   1       8   9        41   51        81
-
-After deleting 7
-
-               11
-       8                      71
-   1       9        41   51        81
-
-After deleting 8
-
-           11             71
-   1   9        41   51        81
-
-After deleting 11
-
-           41        71
-   1   9        51        81
-
-After deleting 41
-
-       9        71
-   1       51        81
-
-After deleting 71
-
-           51
-   1   9        81
-
-After deleting 51
-
-       9
-   1       81
-
-After deleting 81
-
-   1   9
-
-After deleting 9
-
-   1
-
-After deleting 1
-END
  }
 
 ok &randomCheck(3, $develop ? (2, 1) : (2, 3));                                 # Randomize and check against a Perl hash
@@ -2705,27 +2173,38 @@ if (1) {                                                                        
   my $t = Tree::Multi::new;                                                     # Construct tree
      $t->insert($_, 2 * $_) for reverse 1..32;                                  # Load tree in reverse
 
-  is_deeply $t->print, <<END;
- 15 21 27
-   3 6 9 12
-     1 2
-     4 5
-     7 8
-     10 11
-     13 14
-   18
-     16 17
-     19 20
-   24
-     22 23
-     25 26
-   30
-     28 29
-     31 32
+  T($t, <<END);
+ 17 25
+   9 13
+     3 5 7
+       1 2
+       4
+       6
+       8
+     11
+       10
+       12
+     15
+       14
+       16
+   21
+     19
+       18
+       20
+     23
+       22
+       24
+   29
+     27
+       26
+       28
+     31
+       30
+       32
 END
 
   ok  $t->size       == 32;                                                     # Size
-  ok  $t->height     ==  3;                                                     # Height
+  ok  $t->height     ==  4;                                                     # Height
   ok  $t->delete(16) == 2 * 16;                                                 # Delete a key
   ok !$t->find  (16);                                                           # Key no longer present
   ok  $t->find  (17) == 34;                                                     # Find by key
