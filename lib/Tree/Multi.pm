@@ -134,7 +134,7 @@ sub splitFullNode($)                                                            
   $r->keys = $kr; $r->data = $dr;
 
   if ($node->node->@*)                                                          # Not a leaf node
-   {my ($cl, $cr)     = separateNode $node;
+   {my ($cl, $cr) = separateNode $node;
     $l->node = $cl; reUp $l, @$cl;
     $r->node = $cr; reUp $r, @$cr;
    }
@@ -469,41 +469,34 @@ sub insert($$$)                                                                 
         return;
        }
      }
-    unshift $tree->keys->@*, $key;                                              # Insert the key at the end of the block because it is greater than all the other keys in the block
+    unshift $tree->keys->@*, $key;                                              # Insert the key at the start of the block because it is less than all the other keys in the block
     unshift $tree->data->@*, $data;
-    return;
    }
+  else                                                                          # Insert node
+   {my ($compare, $node, $index) = findAndSplit $tree, $key;                    # Check for existing key
 
-  my ($compare, $node, $index) = findAndSplit $tree, $key;                      # Check for existing key
-
-  if ($compare == 0)                                                            # Found an equal key whose data we can update
-   {$node->data->[$index] = $data;
-   }
-  elsif ($node->keys->@* < maximumNumberOfKeys)                                 # We have room for the insert
-   {++$index if $compare > 0;                                                   # Position at which to insert new key
-    splice $node->keys->@*, $index, 0, $key;
-    splice $node->data->@*, $index, 0, $data;
-    splitFullNode $node                                                         # Split if the leaf has got too big
-   }
-  else                                                                          # Insert at the front
-   {++$index if $compare > 0;                                                   # Position at which to insert new key
-
-    my @k = $node->keys->@*;
-    my @d = $node->data->@*;
-
-    splice @k, $index, 0, $key;                                                 # Edit key into position
-    splice @d, $index, 0, $data;
-
-    my $k = pop @k;                                                             # Save excess
-    my $d = pop @d;
-
-    $node->keys = [@k];                                                         # Reconstitute node
-    $node->data = [@d];
-
-    splitFullNode $node;                                                        # Split the leaf as we know it is full
-
-    push $node->node->[0]->keys->@*, $k;                                        # Reinstall excess
-    push $node->node->[0]->data->@*, $d;
+    if ($compare == 0)                                                          # Found an equal key whose data we can update
+     {$node->data->[$index] = $data;
+     }
+    elsif ($node->keys->@* < maximumNumberOfKeys)                               # We have room for the insert
+     {++$index if $compare > 0;                                                 # Position at which to insert new key
+      splice $node->keys->@*, $index, 0, $key;
+      splice $node->data->@*, $index, 0, $data;
+      splitFullNode $node                                                       # Split if the leaf has got too big
+     }
+#   else                                                                        # Insert at the front
+#    {++$index if $compare > 0;                                                 # Position at which to insert new key
+#
+#     splice $node->keys->@*, $index, 0, $key;                                  # Edit key into position
+#     splice $node->data->@*, $index, 0, $data;
+#
+#     my $k = pop $node->keys->@*;                                              # Save excess
+#     my $d = pop $node->data->@*;
+#     splitFullNode $node;                                                      # Split the leaf as we know it is full
+#
+#     push $node->node->[0]->keys->@*, $k;                                      # Reinstall excess
+#     push $node->node->[0]->data->@*, $d;
+#    }
    }
  }
 
