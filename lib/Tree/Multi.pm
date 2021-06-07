@@ -98,10 +98,9 @@ sub splitFullNode($)                                                            
   $r->keys = [@k[$n+2..$#k]];
   $r->data = [@d[$n+2..$#k]];
 
-  if ($node->node->@*)                                                          # Not a leaf node
-   {my @n = $node->node->@*;
-    my $L = $l->node = [@n[0..$n+1]];   reUp $l, $L;
-    my $R = $r->node = [@n[$n+2..$#n]]; reUp $r, $R;
+  if (my @n = $node->node->@*)                                                  # Not a leaf node
+   {reUp $l, $l->node = [@n[0   ..$n+1]];
+    reUp $r, $r->node = [@n[$n+2..$#n ]];
    }
 
   if ($p != $node)                                                              # Not a root node
