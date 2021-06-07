@@ -494,18 +494,17 @@ sub insert($$$)                                                                 
 
   if ($compare == 0)                                                            # Found an equal key whose data we can update
    {$node->data->[$index] = $data;
-    return $tree;
    }
+  else                                                                          # Insert key
+   {$node->keys->@* <= maximumNumberOfKeys or confess 'Keys';
+    $node->data->@* <= maximumNumberOfKeys or confess 'Data';
 
-  my @k = $node->keys->@*; my @d = $node->data->@*;
-  @k <= maximumNumberOfKeys or confess 'Keys';
-  @d <= maximumNumberOfKeys or confess 'Data';
+    ++$index  if $compare > 0;                                                  # Position at which to insert new key
+    splice $node->keys->@*, $index, 0, $key;
+    splice $node->data->@*, $index, 0, $data;
 
-  ++$index  if $compare > 0;                                                    # Position at which to insert new key
-  splice $node->keys->@*, $index, 0, $key;
-  splice $node->data->@*, $index, 0, $data;
-
-  splitFullNode $node                                                           # Split if the leaf has got too big
+    splitFullNode $node                                                         # Split if the leaf has got too big
+   }
  }
 
 sub iterator($)                                                                 # Make an iterator for a tree.
