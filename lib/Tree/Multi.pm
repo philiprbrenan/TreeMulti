@@ -156,6 +156,7 @@ sub findAndSplit($$)                                                            
        }
      }
    }
+
   confess "Should not happen";
  }
 
@@ -218,11 +219,12 @@ sub fillFromLeftOrRight($$)                                                     
   else                                                                          # Fill from left
    {$i > 0 or confess;                                                          # Cannot fill from left
     my $I = $i-1;
-    my $l = $p->node->[$I];                                                     # Left sibling
-    unshift $node->keys->@*, $p->keys->[$I];$p->keys->[$I] = pop $l->keys->@*;  # Transfer key
-    unshift $node->data->@*, $p->data->[$I];$p->data->[$I] = pop $l->data->@*;  # Transfer data
+    my $n = $p->node->[$I];                                                     # Left sibling
+    my $k = $p->keys; my $d = $p->data;
+    unshift $node->keys->@*, $k->[$I]; $k->[$I] = pop $n->keys->@*;             # Transfer key
+    unshift $node->data->@*, $d->[$I]; $d->[$I] = pop $n->data->@*;             # Transfer data
     if (!leaf $node)                                                            # Transfer node if not a leaf
-     {unshift $node->node->@*, pop $l->node->@*;
+     {unshift $node->node->@*, pop $n->node->@*;
       $node->node->[0]->up = $node;
      }
    }
@@ -240,7 +242,8 @@ sub mergeWithLeftOrRight($$)                                                    
 
   if ($dir)                                                                     # Merge with right hand sibling
    {$i < $p->node->@* - 1 or confess;                                           # Cannot fill from right
-    my $r = $p->node->[$i+1];                                                   # Leaf on right
+    my $I = $i+1;
+    my $r = $p->node->[$I];                                                     # Leaf on right
     confess unless halfFull($r);                                                # Confirm right leaf is half full
     push $n->keys->@*, splice($p->keys->@*, $i, 1), $r->keys->@*;               # Transfer keys
     push $n->data->@*, splice($p->data->@*, $i, 1), $r->data->@*;               # Transfer data
@@ -248,19 +251,20 @@ sub mergeWithLeftOrRight($$)                                                    
      {push $n->node->@*, $r->node->@*;                                          # Children of merged node
       reUp $n, $r->node;                                                        # Update parent of children of right node
      }
-    splice $p->node->@*, $i+1, 1;                                               # Remove link from parent to right child
+    splice $p->node->@*, $I, 1;                                                 # Remove link from parent to right child
    }
   else                                                                          # Merge with left hand sibling
    {$i > 0 or confess;                                                          # Cannot fill from left
-    my $l = $p->node->[$i-1];                                                   # Node on left
+    my $I = $i-1;
+    my $l = $p->node->[$I];                                                     # Node on left
     confess unless halfFull($l);                                                # Confirm right leaf is half full
-    unshift $n->keys->@*, $l->keys->@*, splice $p->keys->@*, $i-1, 1;           # Transfer keys
-    unshift $n->data->@*, $l->data->@*, splice $p->data->@*, $i-1, 1;           # Transfer data
+    unshift $n->keys->@*, $l->keys->@*, splice $p->keys->@*, $I, 1;             # Transfer keys
+    unshift $n->data->@*, $l->data->@*, splice $p->data->@*, $I, 1;             # Transfer data
     if (!leaf $n)                                                               # Children of merged node
      {unshift $n->node->@*, $l->node->@*;                                       # Children of merged node
       reUp $n, $l->node;                                                        # Update parent of children of left node
      }
-    splice $p->node->@*, $i-1, 1;                                               # Remove link from parent to left child
+    splice $p->node->@*, $I, 1;                                                 # Remove link from parent to left child
    }
  }
 
@@ -428,8 +432,9 @@ sub insert($$$)                                                                 
         return;
        }
       elsif ($s > 0)                                                            # Insert before greatest smaller key
-       {splice $tree->keys->@*, $i+1, 0, $key;
-        splice $tree->data->@*, $i+1, 0, $data;
+       {my $I = $i + 1;
+        splice $tree->keys->@*, $I, 0, $key;
+        splice $tree->data->@*, $I, 0, $data;
         return;
        }
      }
