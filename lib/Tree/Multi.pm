@@ -120,7 +120,7 @@ sub reUp($@)                                                                    
   $_->up = $tree for @children;                                                 # Connect child to parent
  }
 
-sub splitFullNode($)                                                            #P Split a node, that is not a leaf, if it is full.
+sub splitFullNode($)                                                            #P Split a node if it is full.
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
 
