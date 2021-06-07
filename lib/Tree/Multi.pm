@@ -5,7 +5,7 @@
 #-------------------------------------------------------------------------------
 # podDocumentation
 package Tree::Multi;
-our $VERSION = "20210606";
+our $VERSION = "20210607";
 use warnings FATAL => qw(all);
 use strict;
 use Carp qw(confess cluck);
@@ -450,25 +450,6 @@ sub insert($$$)                                                                 
       splice $node->data->@*, $index, 0, $data;
       splitFullNode $node                                                       # Split if the leaf has got too big
      }
-#   elsif ($node->keys->@* < maximumNumberOfKeys)                               # We have room for the insert
-#    {++$index if $compare > 0;                                                 # Position at which to insert new key
-#     splice $node->keys->@*, $index, 0, $key;
-#     splice $node->data->@*, $index, 0, $data;
-#     splitFullNode $node                                                       # Split if the leaf has got too big
-#    }
-#   else                                                                        # Insert at the front
-#    {++$index if $compare > 0;                                                 # Position at which to insert new key
-#
-#     splice $node->keys->@*, $index, 0, $key;                                  # Edit key into position
-#     splice $node->data->@*, $index, 0, $data;
-#
-#     my $k = pop $node->keys->@*;                                              # Save excess
-#     my $d = pop $node->data->@*;
-#     splitFullNode $node;                                                      # Split the leaf as we know it is full
-#
-#     push $node->node->[0]->keys->@*, $k;                                      # Reinstall excess
-#     push $node->node->[0]->data->@*, $d;
-#    }
    }
  }
 
