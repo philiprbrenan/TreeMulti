@@ -71,13 +71,13 @@ sub leaf($)                                                                     
 
 sub separate(@)                                                                 #P Return ([lower], center, [upper]) keys from an array.
  {my (@k) = @_;                                                                 # Array to split
-  @k == maximumNumberOfKeys or @k == maximumNumberOfNodes or confess 'Keys';    # Node must be full to be split
+  @k == maximumNumberOfKeys or confess 'Keys';                                  # Node must be full to be split
   my @l; my @r;
   while(@k > 1)
    {push    @l, shift @k;
     unshift @r, pop   @k if @k > 1;
    }
-#  @l > 0  or confess 'Left'; @r > 0  or confess 'Right'; @k == 1 or confess 'K';
+   @l > 0  or confess 'Left'; @r > 0  or confess 'Right'; @k == 1 or confess 'K';
   (\@l, $k[0], \@r);
  }
 
@@ -109,7 +109,6 @@ sub separateNode($)                                                             
    {push @l, shift @n;
    }
   @l > 0 or confess "Left"; @r > 0 or confess "Right"; @n==0 or confess "Node";
-
   (\@l, \@r);
  }
 
@@ -229,15 +228,10 @@ sub find($$)                                                                    
 
 sub indexInParent($)                                                            #P Get the index of a node in its parent.
  {my ($tree) = @_;                                                              # Tree
-  @_ == 1 or confess;
-  my $p = $tree->up;
-  confess unless defined $p;
+  @_ == 1 or confess; confess unless my $p = $tree->up;
 
-  my @n = $p->node->@*;
-  for my $i(keys @n)
-   {return $i if $n[$i] == $tree;
-   }
-  confess
+  my @n = $p->node->@*;  for my $i(keys @n) {return $i if $n[$i] == $tree}
+  confess "Should not happen";
  }
 
 sub fillFromLeftOrRight($$)                                                     #P Fill a node from the specified sibling.
@@ -431,36 +425,31 @@ sub delete($$)                                                                  
 
     if ($key < $k[0])                                                           # Less than smallest key in node
      {return undef unless $tree = $tree->node->[0];
-      next;
      }
-
-    if ($key > $k[-1])                                                          # Greater than largest key in node
+    elsif ($key > $k[-1])                                                       # Greater than largest key in node
      {return undef unless $tree = $tree->node->[-1];
-      next;
      }
-
-    for my $i(keys @k)                                                          # Search the keys in this node
-     {my  $s = $key <=> $k[$i];                                                 # Compare key
-      if ($s == 0)                                                              # Delete found key
-       {my $d = $tree->data->[$i];                                              # Save data
-        deleteKey $tree, $i;                                                    # Delete the key
-        return $d;                                                              # Return data associated with key
-       }
-      if ($s < 0)                                                               # Less than current key
-       {return undef unless $tree = $tree->node->[$i];
-        last;
+    else
+     {for my $i(keys @k)                                                        # Search the keys in this node
+       {my  $s = $key <=> $k[$i];                                               # Compare key
+        if ($s == 0)                                                            # Delete found key
+         {my $d = $tree->data->[$i];                                            # Save data
+          deleteKey $tree, $i;                                                  # Delete the key
+          return $d;                                                            # Return data associated with key
+         }
+        if ($s < 0)                                                             # Less than current key
+         {return undef unless $tree = $tree->node->[$i];
+          last;
+         }
        }
      }
    }
-
   confess "Should not happen";
  }
 
 sub insert($$$)                                                                 # Insert the specified key and data into a tree.
  {my ($tree, $key, $data) = @_;                                                 # Tree, key, data
   @_ == 3 or confess;
-
-  $tree or confess;
 
   if (!(my $n = $tree->keys->@*))                                               # Empty tree
    {push $tree->keys->@*, $key;
