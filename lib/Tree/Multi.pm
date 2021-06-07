@@ -124,11 +124,11 @@ sub splitFullNode($)                                                            
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
 
-  if (my @n = $node->node->@*)                                                  # Not a leaf node
-   {return unless @n == maximumNumberOfNodes;                                   # Only split the node if it is full
+  if (my $n = $node->node->@*)                                                  # Not a leaf node
+   {return unless $n == maximumNumberOfNodes;                                   # Only split the node if it is full
    }
-  elsif (my @k = $node->keys->@*)                                               # Split because the leaf has got too big
-   {return unless @k > maximumNumberOfKeys;
+  elsif (my $k = $node->keys->@*)                                               # Split because the leaf has got too big
+   {return unless $k > maximumNumberOfKeys;
    }
 
   my ($kl, $k, $kr) = separateKeys $node;
