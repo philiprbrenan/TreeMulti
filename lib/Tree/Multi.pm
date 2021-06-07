@@ -71,13 +71,13 @@ sub leaf($)                                                                     
 
 sub separate(@)                                                                 #P Return ([lower], center, [upper]) keys from an array.
  {my (@k) = @_;                                                                 # Array to split
-  @k == maximumNumberOfKeys or @k == maximumNumberOfNodes or confess 'Keys';    # A node is allowed to overflow by one pending a split
+  @k == maximumNumberOfKeys or @k == maximumNumberOfNodes or confess 'Keys';    # Node must be full to be split
   my @l; my @r;
   while(@k > 1)
    {push    @l, shift @k;
     unshift @r, pop   @k if @k > 1;
    }
-  @l > 0  or confess 'Left'; @r > 0  or confess 'Right'; @k == 1 or confess 'K';
+#  @l > 0  or confess 'Left'; @r > 0  or confess 'Right'; @k == 1 or confess 'K';
   (\@l, $k[0], \@r);
  }
 
@@ -124,12 +124,7 @@ sub splitFullNode($)                                                            
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
 
-  if (my $n = $node->node->@*)                                                  # Not a leaf node
-   {return unless $n == maximumNumberOfNodes;                                   # Only split the node if it is full
-   }
-  elsif (my $k = $node->keys->@*)                                               # Split because the leaf has got too big
-   {return unless $k > maximumNumberOfKeys;
-   }
+  return unless $node->keys->@* == maximumNumberOfKeys;                         # Only split full nodes
 
   my ($kl, $k, $kr) = separateKeys $node;
   my ($dl, $d, $dr) = separateData $node;
@@ -472,7 +467,7 @@ sub insert($$$)                                                                 
     push $tree->data->@*, $data;
     return $tree;
    }
-  elsif ($n < maximumNumberOfKeys and $tree->node->@* == 0)                     # Node is root with no children and space for more key
+  elsif ($n < maximumNumberOfKeys and $tree->node->@* == 0)                     # Node is root with no children and room for one more key
    {my @k = $tree->keys->@*;
     for my $i(reverse keys @k)                                                  # Each key - in reverse due to the preponderance of already sorted data
      {if ((my $s = $key <=> $k[$i]) == 0)                                       # Key already present
@@ -495,15 +490,33 @@ sub insert($$$)                                                                 
   if ($compare == 0)                                                            # Found an equal key whose data we can update
    {$node->data->[$index] = $data;
    }
-  else                                                                          # Insert key
-   {$node->keys->@* <= maximumNumberOfKeys or confess 'Keys';
-    $node->data->@* <= maximumNumberOfKeys or confess 'Data';
-
-    ++$index  if $compare > 0;                                                  # Position at which to insert new key
+  elsif ($node->keys->@* < maximumNumberOfKeys - 1)                             # We have room for the insert
+   {++$index if $compare > 0;                                                   # Position at which to insert new key
     splice $node->keys->@*, $index, 0, $key;
     splice $node->data->@*, $index, 0, $data;
-
     splitFullNode $node                                                         # Split if the leaf has got too big
+   }
+  else                                                                          # Insert at the front
+   {++$index if $compare > 0;                                                   # Position at which to insert new key
+
+    my @k = $node->keys->@*;
+    my @d = $node->data->@*;
+
+    splice @k, $index, 0, $key;
+    splice @d, $index, 0, $data;
+
+    my $k = pop @k;
+    my $d = pop @d;
+
+    $node->keys = [@k];
+    $node->data = [@d];
+lll "AAAA", dump($node->keys);
+
+    splitFullNode $node;                                                        # Split the leaf as we know it is full
+lll "BBBB", dump($node->node);
+
+    push $node->node->[0]->keys->@*, $k;
+    push $node->node->[0]->data->@*, $d;
    }
  }
 
@@ -1890,9 +1903,66 @@ sub T($$)                                                                       
   confess "$s\n";
  }
 
+sub disordered($$)                                                              #P Disordered but stable insertions
+ {my ($n, $N) = @_;                                                             # Keys per node, nodes
+  local $numberOfKeysPerNode = $n;
+
+  my $t = new;
+  my @t = map{$_ = scalar reverse $_; s/\A0+//r} 1..$N;
+     $t->insert($_, 2 * $_) for @t;
+     $t                                                                         # Tree built from disordered but stable insertions
+ }
+
+sub disorderedCheck($$$)                                                        #P Check disordered insertions
+ {my ($t, $n, $N) = @_;                                                         # Tree to check, keys per node, Nodes
+
+  my %t = map {$_=>2*$_} map{$_ = scalar reverse $_; s/\A0+//r} 1..$N;
+
+  my $e = 0;
+  my $h = $t->height;
+  for my $k(sort {reverse($a) cmp reverse($b)} keys %t)
+   {++$e unless     $t->find($k) == $t{$k};  $t->delete($k); delete $t{$k};
+    ++$e if defined $t->find($k);
+    ++$e if         $t->height > $h;
+   }
+  ++$e unless $t->height == 0;
+
+  !$e;                                                                          # No errors
+ }
+
+sub randomCheck($$$)                                                            #P Random insertions
+ {my ($n, $N, $T) = @_;                                                         # Keys per node, log 10 nodes, log 10 number of tests
+  local $numberOfKeysPerNode = $n;
+  my $e = 0;
+
+  for(1..10**$T)                                                                # Each test
+   {my %t = map {$_=>2*$_} 1..10**$N;
+    my $t = new; $t->insert($_, $t{$_}) for keys %t;
+
+    for my $k(keys %t)                                                          # Delete each key in test
+     {++$e unless     $t->find($k) == $t{$k}; $t->delete($k); delete $t{$k};
+      ++$e if defined $t->find($k);
+     }
+   }
+
+  !$e;                                                                          # No errors
+ }
+
 my $start = time;                                                               # Tests
 
 eval {goto latest} if !caller(0) and -e "/home/phil";                           # Go to latest test if specified
+
+if (1) {                                                                        # Odd number of keys
+  my $t = new;
+  $t = disordered(       3, 256);
+  ok disorderedCheck($t, 3, 256);
+ }
+
+if (1) {                                                                        # Even number of keys
+  my $t = new;
+  $t = disordered(       4, 256);
+  ok disorderedCheck($t, 4, 256);
+ }
 
 if (1) {
   local $numberOfKeysPerNode = 15;
@@ -2408,51 +2478,6 @@ END
 END
  }
 
-sub disordered($$)                                                              #P Disordered but stable insertions
- {my ($n, $N) = @_;                                                             # Keys per node, nodes
-  local $numberOfKeysPerNode = $n;
-
-  my $t = new;
-  my @t = map{$_ = scalar reverse $_; s/\A0+//r} 1..$N;
-     $t->insert($_, 2 * $_) for @t;
-     $t                                                                         # Tree built from disordered but stable insertions
- }
-
-sub disorderedCheck($$$)                                                        #P Check disordered insertions
- {my ($t, $n, $N) = @_;                                                         # Tree to check, keys per node, Nodes
-
-  my %t = map {$_=>2*$_} map{$_ = scalar reverse $_; s/\A0+//r} 1..$N;
-
-  my $e = 0;
-  my $h = $t->height;
-  for my $k(sort {reverse($a) cmp reverse($b)} keys %t)
-   {++$e unless     $t->find($k) == $t{$k};  $t->delete($k); delete $t{$k};
-    ++$e if defined $t->find($k);
-    ++$e if         $t->height > $h;
-   }
-  ++$e unless $t->height == 0;
-
-  !$e;                                                                          # No errors
- }
-
-sub randomCheck($$$)                                                            #P Random insertions
- {my ($n, $N, $T) = @_;                                                         # Keys per node, log 10 nodes, log 10 number of tests
-  local $numberOfKeysPerNode = $n;
-  my $e = 0;
-
-  for(1..10**$T)                                                                # Each test
-   {my %t = map {$_=>2*$_} 1..10**$N;
-    my $t = new; $t->insert($_, $t{$_}) for keys %t;
-
-    for my $k(keys %t)                                                          # Delete each key in test
-     {++$e unless     $t->find($k) == $t{$k}; $t->delete($k); delete $t{$k};
-      ++$e if defined $t->find($k);
-     }
-   }
-
-  !$e;                                                                          # No errors
- }
-
 if (1) {                                                                        #Titerator #TTree::Multi::Iterator::next  #TTree::Multi::Iterator::more
   local $numberOfKeysPerNode = 3; my $N = 256; my $e = 0;  my $t = new;
 
@@ -2526,12 +2551,6 @@ if (1) {                                                                        
    1   2       4   5       7   8
 END
 
- }
-
-if (1) {                                                                        # Even number of keys
-  my $t = new;
-  $t = disordered(       4, 256);
-  ok disorderedCheck($t, 4, 256);
  }
 
 if (1) {                                                                        # Even number of keys
