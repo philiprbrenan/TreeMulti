@@ -17,12 +17,9 @@ our $numberOfKeysPerNode = 3;                                                   
 
 #D1 Multi-way Tree                                                              # Create and use a multi-way tree.
 
-my $nodes = 0;                                                                  # Count the nodes created
-
 sub new()                                                                       #P Create a new multi-way tree node.
  {my () = @_;                                                                   # Key, $data, parent node, index of link from parent node
   genHash(__PACKAGE__,                                                          # Multi tree node
-    number=> ++$nodes,                                                          # Number of the node for debugging purposes
     up    => undef,                                                             # Parent node
     keys  => [],                                                                # Array of key items for this node
     data  => [],                                                                # Data corresponding to each key
@@ -68,7 +65,7 @@ sub root($)                                                                     
 sub leaf($)                                                                     # Confirm that the tree is a leaf.
  {my ($tree) = @_;                                                              # Tree
   @_ == 1 or confess;
-  ! scalar $tree->node->@*                                                      # No children so it must be a leaf
+  !scalar $tree->node->@*                                                       # No children so it must be a leaf
  }
 
 sub reUp($$)                                                                    #P Reconnect the children to their new parent.
@@ -85,7 +82,7 @@ sub splitFullNode($)                                                            
   return unless $node->keys->@* == maximumNumberOfKeys;                         # Only split full nodes
 
   my ($p, $l, $r) = ($node->up // $node, new, new);                             # New child nodes
-  $l->up   = $r->up = $p;                                                       # Connect children to parent
+  $l->up = $r->up = $p;                                                         # Connect children to parent
 
   my @k = $node->keys->@*;
   my @d = $node->data->@*;
@@ -447,12 +444,18 @@ sub insert($$$)                                                                 
     if ($compare == 0)                                                          # Found an equal key whose data we can update
      {$node->data->[$index] = $data;
      }
-    elsif ($node->keys->@* < maximumNumberOfKeys)                               # We have room for the insert
+    else                                                                        # We have room for the insert
      {++$index if $compare > 0;                                                 # Position at which to insert new key
       splice $node->keys->@*, $index, 0, $key;
       splice $node->data->@*, $index, 0, $data;
       splitFullNode $node                                                       # Split if the leaf has got too big
      }
+#   elsif ($node->keys->@* < maximumNumberOfKeys)                               # We have room for the insert
+#    {++$index if $compare > 0;                                                 # Position at which to insert new key
+#     splice $node->keys->@*, $index, 0, $key;
+#     splice $node->data->@*, $index, 0, $data;
+#     splitFullNode $node                                                       # Split if the leaf has got too big
+#    }
 #   else                                                                        # Insert at the front
 #    {++$index if $compare > 0;                                                 # Position at which to insert new key
 #
