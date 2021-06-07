@@ -71,50 +71,6 @@ sub leaf($)                                                                     
   ! scalar $tree->node->@*                                                      # No children so it must be a leaf
  }
 
-sub separate($)                                                                 #P Return ([lower], center, [upper]) keys from an array.
- {my ($k) = @_;                                                                 # Array to split
-  my @k = @$k;
-  @k == maximumNumberOfKeys or confess 'Keys';                                  # Node must be full to be split
-  my @l; my @r;
-  while(@k > 1)
-   {push    @l, shift @k;
-    unshift @r, pop   @k if @k > 1;
-   }
-   @l > 0  or confess 'Left'; @r > 0  or confess 'Right'; @k == 1 or confess 'K';
-  (\@l, $k[0], \@r);
- }
-
-sub separateKeys($)                                                             #P Return ([lower], center, [upper]) keys.
- {my ($node) = @_;                                                              # Node to split
-  @_ == 1 or confess;
-  separate $node->keys;
- }
-
-sub separateData($)                                                             #P Return ([lower], center, [upper]) data.
- {my ($node) = @_;                                                              # Node to split
-  @_ == 1 or confess;
-  separate $node->data;
- }
-
-sub separateNode($)                                                             #P Return ([lower], [upper]) children.
- {my ($node) = @_;                                                              # Node to split
-  @_ == 1 or confess;
-  my @n = $node->node->@*;
-  @n == maximumNumberOfNodes or confess 'Node';
-
-  my @l; my @r;
-  while(@n > 1)
-   {push    @l, shift @n;
-    unshift @r, pop   @n;
-   }
-
-  if (@n == 1)                                                                  # Even keys per node
-   {push @l, shift @n;
-   }
-  @l > 0 or confess "Left"; @r > 0 or confess "Right"; @n==0 or confess "Node";
-  (\@l, \@r);
- }
-
 sub reUp($$)                                                                    #P Reconnect the children to their new parent.
  {my ($tree, $children) = @_;                                                   # Tree, children
   @_ > 0 or confess;
@@ -128,26 +84,32 @@ sub splitFullNode($)                                                            
 
   return unless $node->keys->@* == maximumNumberOfKeys;                         # Only split full nodes
 
-  my ($kl, $k, $kr) = separateKeys $node;
-  my ($dl, $d, $dr) = separateData $node;
-
   my ($p, $l, $r) = ($node->up // $node, new, new);                             # New child nodes
-  $l->up   = $r->up = $p;
-  $l->keys = $kl; $l->data = $dl;
-  $r->keys = $kr; $r->data = $dr;
+  $l->up   = $r->up = $p;                                                       # Connect children to parent
+
+  my @k = $node->keys->@*;
+  my @d = $node->data->@*;
+
+  my $N = int maximumNumberOfNodes / 2;                                         # Split points
+  my $n =     maximumNumberOfKeys % 2 == 0 ? $N - 1 : $N - 2;
+
+  $l->keys = [@k[0..$n]];                                                       # Split keys
+  $l->data = [@d[0..$n]];                                                       # Split data
+  $r->keys = [@k[$n+2..$#k]];
+  $r->data = [@d[$n+2..$#k]];
 
   if ($node->node->@*)                                                          # Not a leaf node
-   {my ($cl, $cr) = separateNode $node;
-    $l->node = $cl; reUp $l, $cl;
-    $r->node = $cr; reUp $r, $cr;
+   {my @n = $node->node->@*;
+    my $L = $l->node = [@n[0..$n+1]];   reUp $l, $L;
+    my $R = $r->node = [@n[$n+2..$#n]]; reUp $r, $R;
    }
 
   if ($p != $node)                                                              # Not a root node
    {my @n = $p->node->@*;                                                       # Insert new nodes in parent known to be not full
     for my $i(keys @n)
      {if ($n[$i] == $node)
-       {splice $p->keys->@*, $i, 0, $k;
-        splice $p->data->@*, $i, 0, $d;
+       {splice $p->keys->@*, $i, 0, $k[$n+1];
+        splice $p->data->@*, $i, 0, $d[$n+1];
         splice $p->node->@*, $i, 1, $l, $r;
         return;
        }
@@ -155,8 +117,8 @@ sub splitFullNode($)                                                            
     confess "Should not happen";
    }
   else                                                                          # Root node
-   {$node->keys = [$k];
-    $node->data = [$d];
+   {$node->keys = [$k[$n+1]];
+    $node->data = [$d[$n+1]];
     $node->node = [$l, $r];
    }
  }
@@ -2202,6 +2164,21 @@ END
   ok $t->delete($_) == 2 * $_ for @k;                                           # Delete
 
   ok $t->find(17) == 34 && $t->size == 1;                                       # Size
+ }
+
+#latest:;
+if (1) {                                                                        # Synopsis #Tnew #Tinsert #Tfind #Tdelete #Tprint #Titerator
+  local $Tree::Multi::numberOfKeysPerNode = 3;                                  # Number of keys per node - can be even
+
+  my $t = Tree::Multi::new;                                                     # Construct tree
+     $t->insert($_, $_) for 1..8;
+
+  T($t, <<END, 1);
+
+               4
+       2               6
+   1       3       5       7   8
+END
  }
 
 lll "Success:", sprintf("%5.2f seconds", time - $start);
