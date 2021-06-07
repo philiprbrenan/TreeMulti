@@ -501,14 +501,9 @@ sub insert($$$)                                                                 
   @k <= maximumNumberOfKeys or confess 'Keys';
   @d <= maximumNumberOfKeys or confess 'Data';
 
-  if ($compare < 0)                                                             # Insert into a leaf node below the index
-   {$node->keys = [@k[0..$index-1], $key,  @k[$index..$#k]];
-    $node->data = [@d[0..$index-1], $data, @d[$index..$#d]];
-   }
-  else                                                                          # Insert into a leaf node node above the index
-   {$node->keys = [@k[0..$index], $key,  @k[$index+1..$#k]];
-    $node->data = [@d[0..$index], $data, @d[$index+1..$#d]];
-   }
+  ++$index  if $compare > 0;                                                    # Position at which to insert new key
+  splice $node->keys->@*, $index, 0, $key;
+  splice $node->data->@*, $index, 0, $data;
 
   splitFullNode $node                                                           # Split if the leaf has got too big
  }
