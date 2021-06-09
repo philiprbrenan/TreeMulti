@@ -1942,7 +1942,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 83;
+ {plan tests => 84;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -2280,7 +2280,6 @@ END
   ok $t->find(17) == 34 && $t->size == 1;                                       # Size
  }
 
-#latest:;
 if (1) {                                                                        # Synopsis #Tnew #Tinsert #Tfind #Tdelete #Tprint #Titerator
   local $Tree::Multi::numberOfKeysPerNode = 3;                                  # Number of keys per node - can be even
 
@@ -2292,6 +2291,21 @@ if (1) {                                                                        
                4
        2               6
    1       3       5       7   8
+END
+ }
+
+latest:;
+
+if (1) {                                                                        # Synopsis #Tnew #Tinsert #Tfind #Tdelete #Tprint #Titerator
+  local $Tree::Multi::numberOfKeysPerNode = 14;                                 # Number of keys per node - can be even
+
+  my $t = Tree::Multi::new;                                                     # Construct tree
+     $t->insert($_, $_) for 1..15;
+
+  T($t, <<END, 1);
+
+                               8
+   1   2   3   4   5   6   7       9   10   11   12   13   14   15
 END
  }
 
