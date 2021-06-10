@@ -471,7 +471,7 @@ sub iterator($)                                                                 
 
 sub Tree::Multi::Iterator::next($)                                              # Find the next key.
  {my ($iter) = @_;                                                              # Iterator
-  @_ >= 1 or confess;
+  @_ == 1 or confess;
   confess unless my $C = $iter->node;                                           # Current node required
 
   ++$iter->count;                                                               # Count the calls to the iterator
@@ -526,7 +526,7 @@ sub reverseIterator($)                                                          
 
 sub Tree::Multi::ReverseIterator::prev($)                                       # Find the previous key.
  {my ($iter) = @_;                                                              # Iterator
-  @_ >= 1 or confess;
+  @_ == 1 or confess;
   confess unless my $C = $iter->node;                                           # Current node required
 
   ++$iter->count;                                                               # Count the calls to the iterator
