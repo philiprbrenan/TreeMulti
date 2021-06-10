@@ -492,7 +492,7 @@ sub Tree::Multi::Iterator::next($)                                              
    }
 
   my $up = sub                                                                  # Iterate up to next node that has not been visited
-   {for(my $n = $C; my $p = $n->up; $n = $n->up)
+   {for(my $n = $C; my $p = $n->up; $n = $p)
      {my $i = indexInParent $n;
       return &$new($p, $i) if $i < $p->keys->@*;
      }
@@ -548,7 +548,7 @@ sub Tree::Multi::ReverseIterator::prev($)                                       
    }
 
   my $up = sub                                                                  # Iterate up to next node that has not been visited
-   {for(my $n = $C; my $p = $n->up; $n = $n->up)
+   {for(my $n = $C; my $p = $n->up; $n = $p)
      {my $i = indexInParent $n;
       return &$new($p, $i-1) if $i > 0;
      }
