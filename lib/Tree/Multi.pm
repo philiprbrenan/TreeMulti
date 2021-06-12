@@ -1942,7 +1942,7 @@ my $localTest = ((caller(1))[0]//'Tree::Multi') eq "Tree::Multi";               
 Test::More->builder->output("/dev/null") if $localTest;                         # Reduce number of confirmation messages during testing
 
 if ($^O =~ m(bsd|linux)i)                                                       # Supported systems
- {plan tests => 83;
+ {plan tests => 84;
  }
 else
  {plan skip_all =>qq(Not supported on: $^O);
@@ -2306,6 +2306,26 @@ if (1) {                                                                        
                                8
    1   2   3   4   5   6   7       9   10   11   12   13   14   15
 END
+ }
+
+#latest:;
+if (1) {
+  local $Tree::Multi::numberOfKeysPerNode = 3;
+
+  my $t = Tree::Multi::new;
+     $t->insert($_, $_) for 1..15;
+
+  T($t, <<END, 1);
+
+               4               8
+       2               6               10        12        14
+   1       3       5       7       9        11        13        15
+END
+  my @k;
+  for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
+   {push @k, $i->key;
+   }
+  is_deeply [@k], [1..15];
  }
 
 lll "Success:", sprintf("%5.2f seconds", time - $start);
