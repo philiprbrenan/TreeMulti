@@ -504,7 +504,9 @@ sub Tree::Multi::Iterator::next($)                                              
    {$i < $C->keys->@* ? &$new($C, $i) : &$up;
    }
   else                                                                          # Node
-   {$i <= $C->node->@* ? &$new($C->node->[$i]->leftMost) : &$up;
+   {#lll "AAAA", dump($i, scalar($C->node->@*));
+#   $i < $C->node->@* ? &$new($C->node->[$i]->leftMost) : &$up;
+    &$new($C->node->[$i]->leftMost)
    }
  }
 
