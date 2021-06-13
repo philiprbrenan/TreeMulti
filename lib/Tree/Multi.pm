@@ -79,7 +79,11 @@ sub splitFullNode($)                                                            
  {my ($node) = @_;                                                              # Node to split
   @_ == 1 or confess;
 
-  return unless $node->keys->@* == maximumNumberOfKeys;                         # Only split full nodes
+  if (1)                                                                        # Check number of keys
+   {my $c = $node->keys->@*;                                                    # Number of keys
+    confess if    $c  > maximumNumberOfKeys;                                    # Complain about over full nodes
+    return unless $c == maximumNumberOfKeys;                                    # Only split full nodes
+   }
 
   my ($p, $l, $r) = ($node->up // $node, new, new);                             # New child nodes
   $l->up = $r->up = $p;                                                         # Connect children to parent
@@ -185,6 +189,7 @@ sub find($$)                                                                    
        }
      }
    }
+
   confess "Should not happen";
  }
 
@@ -448,7 +453,7 @@ sub insert($$$)                                                                 
      {++$index if $compare > 0;                                                 # Position at which to insert new key
       splice $node->keys->@*, $index, 0, $key;
       splice $node->data->@*, $index, 0, $data;
-      splitFullNode $node                                                       # Split if the leaf has got too big
+      splitFullNode $node                                                       # Split if the leaf is full to force keys up the tree
      }
    }
  }
