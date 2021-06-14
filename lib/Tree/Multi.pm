@@ -456,7 +456,7 @@ sub insert($$$)                                                                 
      {++$index if $compare > 0;                                                 # Position at which to insert new key
       splice $node->keys->@*, $index, 0, $key;
       splice $node->data->@*, $index, 0, $data;
-      splitFullNode 0, 1, $node                                                    # Split if the leaf is full to force keys up the tree
+      splitFullNode 0, 1, $node                                                 # Split if the leaf is full to force keys up the tree
      }
    }
  }
