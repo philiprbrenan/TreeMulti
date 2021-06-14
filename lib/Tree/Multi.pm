@@ -75,9 +75,9 @@ sub reUp($$)                                                                    
   $_->up = $tree for @$children;                                                # Connect child to parent
  }
 
-sub splitFullNode($)                                                            #P Split a node if it is full.
- {my ($node) = @_;                                                              # Node to split
-  @_ == 1 or confess;
+sub splitFullNode($$$)                                                          #P Split a node if it is full.
+ {my ($isRoot, $isLeaf, $node) = @_;                                            # Known to be the root if true, known to be a leaf if true, node to split
+  @_ == 3 or confess;
 
   if (1)                                                                        # Check number of keys
    {my $c = $node->keys->@*;                                                    # Number of keys
@@ -99,12 +99,13 @@ sub splitFullNode($)                                                            
   $r->keys = [@k[$n+2..$#k]];
   $r->data = [@d[$n+2..$#k]];
 
-  if (my @n = $node->node->@*)                                                  # Not a leaf node
-   {reUp $l, $l->node = [@n[0   ..$n+1]];
+  if (!$isLeaf)                                                                 # Not a leaf node
+   {my @n = $node->node->@*;
+    reUp $l, $l->node = [@n[0   ..$n+1]];
     reUp $r, $r->node = [@n[$n+2..$#n ]];
    }
 
-  if ($p != $node)                                                              # Not a root node
+  if (!$isRoot)                                                                 # Not a root node
    {my @n = $p->node->@*;                                                       # Insert new nodes in parent known to be not full
     for my $i(keys @n)                                                          # Each parent node
      {if ($n[$i] == $node)                                                      # Find the node that points from the parent to the current node
@@ -129,7 +130,7 @@ sub findAndSplit($$)                                                            
 
   my $tree = $root;                                                             # Start at the root
 
-  splitFullNode $tree;                                                          # Split the root node if necessary
+  splitFullNode 1, !scalar($tree->node->@*), $tree;                             # Split the root node if necessary
 
   for(0..999)                                                                   # Step down through the tree
    {confess unless my @k = $tree->keys->@*;                                     # We should have at least one key in the tree because we do a special case insert for an empty tree
@@ -158,7 +159,7 @@ sub findAndSplit($$)                                                            
        }
      }
    }
-  continue {splitFullNode $tree}                                                # Split the node we have stepped to
+  continue {splitFullNode 0, 0, $tree}                                          # Split the node we have stepped to
 
   confess "Should not happen";
  }
@@ -455,7 +456,7 @@ sub insert($$$)                                                                 
      {++$index if $compare > 0;                                                 # Position at which to insert new key
       splice $node->keys->@*, $index, 0, $key;
       splice $node->data->@*, $index, 0, $data;
-      splitFullNode $node                                                       # Split if the leaf is full to force keys up the tree
+      splitFullNode 0, 1, $node                                                    # Split if the leaf is full to force keys up the tree
      }
    }
  }
