@@ -129,9 +129,10 @@ sub findAndSplit($$)                                                            
 
   my $tree = $root;                                                             # Start at the root
 
+  splitFullNode $tree;                                                          # Split the root node if necessary
+
   for(0..999)                                                                   # Step down through the tree
-   {splitFullNode $tree;                                                        # Split any full nodes encountered
-    confess unless my @k = $tree->keys->@*;                                     # We should have at least one key in the tree because we do a special case insert for an empty tree
+   {confess unless my @k = $tree->keys->@*;                                     # We should have at least one key in the tree because we do a special case insert for an empty tree
 
     if ($key < $k[0])                                                           # Less than smallest key in node
      {return (-1, $tree, 0)    unless my $n = $tree->node->[0];
@@ -157,6 +158,7 @@ sub findAndSplit($$)                                                            
        }
      }
    }
+  continue {splitFullNode $tree}                                                # Split the node we have stepped to
 
   confess "Should not happen";
  }
@@ -2317,22 +2319,21 @@ END
 
 #latest:;
 if (1) {
-  local $Tree::Multi::numberOfKeysPerNode = 3;
+  local $Tree::Multi::numberOfKeysPerNode = 14;
 
   my $t = Tree::Multi::new;
-     $t->insert($_, $_) for 1..15;
+     $t->insert($_, $_) for 0..21;
 
   T($t, <<END, 1);
 
-               4               8
-       2               6               10        12        14
-   1       3       5       7       9        11        13        15
+                               7                                    15
+   0   1   2   3   4   5   6       8   9   10   11   12   13   14        16   17   18   19   20   21
 END
   my @k;
   for(my $i = $t->iterator; $i->more; $i->next)                                 # Iterator
    {push @k, $i->key;
    }
-  is_deeply [@k], [1..15];
+  is_deeply [@k], [0..21];
  }
 
 lll "Success:", sprintf("%5.2f seconds", time - $start);
